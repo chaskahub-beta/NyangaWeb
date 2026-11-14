@@ -1486,6 +1486,62 @@ a.contact-value:hover { text-decoration: underline; }
 .add-cal-btns .btn { flex: 1 1 150px; min-height: 42px; padding: 8px 14px; font-size: .88rem; gap: 8px; text-decoration: none; }
 .add-cal-btns svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; flex: none; }
 
+/* Forma de pago: acompte (recomendado) o total */
+.pay-options {
+  margin: 14px 0 4px;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+.pay-options legend { margin-bottom: 8px; font-size: .86rem; color: var(--ink); opacity: .8; }
+.pay-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--sand);
+  border-radius: 14px;
+  background: var(--paper);
+  cursor: pointer;
+  transition: border-color .2s ease, background-color .2s ease;
+}
+.pay-option:has(input:checked) { border-color: var(--copper); background: #FFF9F2; }
+.pay-option input { margin-top: 3px; accent-color: var(--bordeaux); width: 18px; height: 18px; flex: none; }
+.pay-option span { display: flex; flex-direction: column; gap: 2px; }
+.pay-option strong { font-weight: 500; }
+.pay-option small { color: var(--ink); opacity: .7; line-height: 1.4; }
+
+/* Mensaje para enviar la carte cadeau al beneficiario */
+.share-gift {
+  width: 100%;
+  padding: 16px;
+  border: 1px dashed var(--gold);
+  border-radius: 18px;
+  background: #FFFDF9;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.share-gift .eyebrow { color: var(--terracotta); }
+.share-gift .fine { margin: 0; }
+.share-text {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--sand);
+  white-space: pre-line;
+  font-size: .9rem;
+  line-height: 1.5;
+  user-select: all;
+}
+.share-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.share-btns .btn { flex: 1 1 120px; min-height: 42px; padding: 8px 14px; font-size: .88rem; text-decoration: none; }
+.share-btns svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.share-status { min-height: 1em; color: var(--sage-deep); }
+
 .gift-card {
   position: relative;
   overflow: hidden;
@@ -1658,3 +1714,5 @@ a.contact-value:hover { text-decoration: underline; }
 
 /* Bloquear scroll del fondo con la hoja abierta */
 body.sheet-open { overflow: hidden; }
+
+.gift-card .gift-rest { color: var(--gold-soft); font-weight: 500; }

@@ -3,7 +3,7 @@
   Reproduce /api/* en el navegador con la misma lógica del servidor
   (catálogo, festivos, horarios, carte cadeau, agenda .ics).
   Las reservas se guardan solo en este navegador (localStorage).
-  Se incluye en docs/js/demo-api.js mediante scripts/build-demo.js.
+  Se incluye en docs/js/demo-api.js mediante demo/build-demo.mjs.
 */
 (function () {
   "use strict";
@@ -108,7 +108,7 @@
     }
     if (input.acceptDeposit !== true) fields.push("acceptDeposit");
     if (fields.length) throw err(400, "invalid_fields", { fields: fields });
-    return { lang: input.lang === "en" ? "en" : "fr", mode: mode, sel: sel, date: input.date, start: input.start, client: client, gift: gift };
+    return { lang: input.lang === "en" ? "en" : "fr", mode: mode, sel: sel, date: input.date, start: input.start, client: client, gift: gift, payFull: input.payFull === true };
   }
 
   function paymentUrl(b) {
@@ -139,7 +139,10 @@
       giftName: b.mode === "gift" ? b.gift_name : undefined,
       giftCode: ok ? (b.gift_code || undefined) : undefined,
       holdExpiresAt: b.status === "pending_payment" ? b.hold_expires_at : undefined,
-      calendar: b.status === "confirmed" ? calendarLinks(b) : undefined
+      calendar: b.status === "confirmed" ? calendarLinks(b) : undefined,
+      paidFull: !!b.pay_full,
+      clientName: b.mode === "gift" ? b.client_name : undefined,
+      giftMessage: b.mode === "gift" ? (b.gift_message || undefined) : undefined
     };
   }
 
@@ -193,7 +196,7 @@
         services_json: JSON.stringify(v.sel.items.map(function (s) {
           return { id: s.id, name: s.name, priceCents: Math.round(s.price * 100), minutes: s.slotMinutes };
         })),
-        total_cents: total, deposit_cents: Math.round(total * CONFIG.depositRate),
+        total_cents: total, deposit_cents: v.payFull ? total : Math.round(total * CONFIG.depositRate), pay_full: v.payFull ? 1 : 0,
         client_name: v.client.name, client_email: v.client.email, client_phone: v.client.phone,
         gift_name: v.gift && v.gift.name, gift_age: v.gift && v.gift.age,
         gift_email: v.gift && v.gift.email, gift_message: v.gift && v.gift.message

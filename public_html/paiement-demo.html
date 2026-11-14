@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Paiement simulé · Nyanga</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@300;400;500&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=20261114d">
+</head>
+<body>
+  <div class="shell">
+    <div class="main demo-pay">
+      <div class="notice warm">
+        Page de test : elle remplace SumUp tant que la clé SumUp n'est pas configurée. Aucun paiement réel.
+      </div>
+      <div class="summary">
+        <div class="summary-row"><span>Rendez-vous</span><span id="demo-when">…</span></div>
+        <div class="summary-row deposit"><span>Acompte (20 %)</span><span id="demo-amount">…</span></div>
+      </div>
+      <div class="demo-actions">
+        <button class="btn btn-dark" id="demo-ok" disabled>Simuler un paiement réussi</button>
+        <button class="btn btn-outline" id="demo-fail" disabled>Simuler un paiement refusé</button>
+      </div>
+      <p class="fine" id="demo-msg" role="status"></p>
+    </div>
+  </div>
+  <script src="js/paiement-demo.js?v=20261114d"></script>
+</body>
+</html>

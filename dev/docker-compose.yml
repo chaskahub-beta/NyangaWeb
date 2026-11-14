@@ -1,0 +1,50 @@
+# Prueba local de la versión PHP (no se sube al hosting).
+#   docker compose -f dev/docker-compose.yml up -d --build
+#   Sitio: http://localhost:8080   ·   Correos de prueba: http://localhost:8025
+name: nyanga-php
+services:
+  web:
+    build:
+      context: .
+      pull: false
+    ports:
+      - "8080:80"
+    volumes:
+      - ../public_html:/var/www/html
+      - ../nyanga-app:/var/www/nyanga-app
+      - ./:/var/www/dev:ro
+    environment:
+      NYANGA_CONFIG: /var/www/dev/config.local.php
+    depends_on:
+      - db
+  db:
+    image: mysql:8.0
+    pull_policy: never
+    environment:
+      MYSQL_DATABASE: nyanga
+      MYSQL_USER: nyanga
+      MYSQL_PASSWORD: nyanga-dev
+      MYSQL_ROOT_PASSWORD: root-dev
+    volumes:
+      - db-data:/var/lib/mysql
+  # Servidor de correo FICTICIO "mail.nyanga.test", configurado como el de Hostinet:
+  # puerto 465 con SSL obligatorio + usuario y contraseña. No entrega a internet:
+  # todos los correos se quedan en la bandeja web http://localhost:8025
+  mail:
+    image: axllent/mailpit:v1.21
+    command:
+      - --smtp=[::]:465
+      - --smtp-require-tls
+      - --smtp-tls-cert=/certs/mail.crt
+      - --smtp-tls-key=/certs/mail.key
+      - --smtp-auth-file=/certs/smtp-users.txt
+    volumes:
+      - ./certs:/certs:ro
+    networks:
+      default:
+        aliases:
+          - mail.nyanga.test
+    ports:
+      - "8025:8025"
+volumes:
+  db-data:

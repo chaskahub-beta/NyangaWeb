@@ -1,8 +1,216 @@
-/* Generado por scripts/build-demo.js: no editar */
+/* Generado por demo/build-demo.mjs: no editar */
 window.__NYANGA_MODULES = {};
+var CATALOG_DATA = {
+  "categories": [
+    {
+      "id": "massages",
+      "name": {
+        "fr": "Massages",
+        "en": "Massages"
+      }
+    },
+    {
+      "id": "headspa",
+      "name": {
+        "fr": "Head Spa",
+        "en": "Head Spa"
+      }
+    },
+    {
+      "id": "soins",
+      "name": {
+        "fr": "Autres soins",
+        "en": "Other treatments"
+      }
+    }
+  ],
+  "services": [
+    {
+      "id": "signature",
+      "cat": "massages",
+      "price": 60,
+      "duration": 70,
+      "slotMinutes": 70,
+      "name": {
+        "fr": "Massage signature Nyanga",
+        "en": "Nyanga signature massage"
+      },
+      "sub": {
+        "fr": "Pressothérapie + modelage",
+        "en": "Pressotherapy + massage"
+      },
+      "desc": {
+        "fr": "15 minutes de pressothérapie sur siège pour stimuler la circulation et préparer le corps, puis notre massage signature.",
+        "en": "15 minutes of seated pressotherapy to boost circulation and prepare the body, followed by our signature massage."
+      }
+    },
+    {
+      "id": "relaxant",
+      "cat": "massages",
+      "price": 50,
+      "duration": 60,
+      "slotMinutes": 60,
+      "name": {
+        "fr": "Massage relaxant",
+        "en": "Relaxing massage"
+      },
+      "desc": {
+        "fr": "Un voyage sensoriel pour libérer les tensions accumulées.",
+        "en": "A sensory journey to release built-up tension."
+      }
+    },
+    {
+      "id": "sportif",
+      "cat": "massages",
+      "price": 70,
+      "duration": 60,
+      "slotMinutes": 60,
+      "name": {
+        "fr": "Massage sportif",
+        "en": "Sports massage"
+      },
+      "desc": {
+        "fr": "Conçu pour les corps actifs : pétrissage profond et friction ciblée pour favoriser la récupération musculaire, améliorer la souplesse et prévenir les blessures.",
+        "en": "Designed for active bodies: deep kneading and targeted friction to support muscle recovery, improve flexibility and prevent injury."
+      }
+    },
+    {
+      "id": "headspa-decouverte",
+      "cat": "headspa",
+      "price": 55,
+      "duration": 45,
+      "slotMinutes": 45,
+      "name": {
+        "fr": "Head spa découverte",
+        "en": "Head spa discovery"
+      },
+      "sub": {
+        "fr": "Méthode Shiatsu",
+        "en": "Shiatsu method"
+      },
+      "desc": {
+        "fr": "Initiation au rituel : soin du cuir chevelu pour nourrir et revitaliser les racines, sur table head spa massante et chauffante.",
+        "en": "An introduction to the ritual: scalp care to nourish and revitalise the roots, on a heated massage head spa table."
+      }
+    },
+    {
+      "id": "headspa-detente",
+      "cat": "headspa",
+      "price": 80,
+      "duration": 60,
+      "slotMinutes": 60,
+      "name": {
+        "fr": "Head spa détente",
+        "en": "Head spa relax"
+      },
+      "sub": {
+        "fr": "Méthode Shiatsu",
+        "en": "Shiatsu method"
+      },
+      "desc": {
+        "fr": "Head spa découverte + modelage des épaules.",
+        "en": "Head spa discovery + shoulder massage."
+      }
+    },
+    {
+      "id": "headspa-voyage",
+      "cat": "headspa",
+      "price": 95,
+      "duration": 90,
+      "slotMinutes": 90,
+      "name": {
+        "fr": "Head spa voyage",
+        "en": "Head spa journey"
+      },
+      "sub": {
+        "fr": "Méthode Shiatsu",
+        "en": "Shiatsu method"
+      },
+      "desc": {
+        "fr": "Head spa détente complet + rituel visage.",
+        "en": "The full head spa relax + facial ritual."
+      }
+    },
+    {
+      "id": "hammam",
+      "cat": "soins",
+      "price": 70,
+      "duration": 60,
+      "slotMinutes": 60,
+      "name": {
+        "fr": "Hammam - Gommage",
+        "en": "Hammam - Body scrub"
+      },
+      "desc": {
+        "fr": "Vapeur chaude pour ouvrir les pores et détendre les muscles en profondeur, puis exfoliation corporelle.",
+        "en": "Warm steam to open the pores and deeply relax the muscles, followed by a full body exfoliation."
+      }
+    },
+    {
+      "id": "pieds",
+      "cat": "soins",
+      "price": 50,
+      "duration": null,
+      "slotMinutes": 60,
+      "name": {
+        "fr": "Rituel pieds",
+        "en": "Foot ritual"
+      },
+      "desc": {
+        "fr": "Massage des pieds à l'huile chaude, vernis semi-permanent inclus.",
+        "en": "Warm oil foot massage, semi-permanent polish included."
+      }
+    },
+    {
+      "id": "mains",
+      "cat": "soins",
+      "price": 50,
+      "duration": null,
+      "slotMinutes": 60,
+      "name": {
+        "fr": "Rituel mains",
+        "en": "Hand ritual"
+      },
+      "desc": {
+        "fr": "Soin à la paraffine, vernis semi-permanent inclus.",
+        "en": "Paraffin treatment, semi-permanent polish included."
+      }
+    },
+    {
+      "id": "visage",
+      "cat": "soins",
+      "price": 40,
+      "duration": null,
+      "slotMinutes": 45,
+      "name": {
+        "fr": "Rituel visage",
+        "en": "Facial ritual"
+      },
+      "desc": {
+        "fr": "Avec vapozone et luminothérapie.",
+        "en": "With vapozone steam and light therapy."
+      }
+    },
+    {
+      "id": "tresses",
+      "cat": "soins",
+      "price": 30,
+      "duration": null,
+      "slotMinutes": 60,
+      "name": {
+        "fr": "Tresses africaines",
+        "en": "African braids"
+      },
+      "desc": {
+        "fr": "Tous types de tresses.",
+        "en": "All types of braids."
+      }
+    }
+  ]
+};
 var Buffer = { byteLength: function (s) { return new TextEncoder().encode(s).length; } };
 
-/* server/calendar.js */
+/* lib/calendar.js */
 (function (module) {
 "use strict";
 
@@ -148,127 +356,22 @@ module.exports = {
 window.__NYANGA_MODULES.calendar = module.exports;
 })({ exports: {} });
 
-/* server/catalog.js */
+/* lib/catalog.js */
 (function (module) {
 "use strict";
 
 /*
-  Catálogo de soins. Fuente única de verdad: el sitio lo pide a /api/catalog
-  y el servidor recalcula siempre los precios con estos datos.
-
-  duration     → duración mostrada al cliente (null = no se muestra)
-  slotMinutes  → tiempo que se bloquea en la agenda
-  Las duraciones de rituels y tresses están por confirmar con la empresa.
+  Catálogo para la demo: mismos datos que nyanga-app/catalog.json
+  (build-demo.mjs los inyecta en CATALOG_DATA) y misma validación que Catalog.php.
 */
 
-const categories = [
-  { id: "massages", name: { fr: "Massages", en: "Massages" } },
-  { id: "headspa", name: { fr: "Head Spa", en: "Head Spa" } },
-  { id: "soins", name: { fr: "Autres soins", en: "Other treatments" } }
-];
-
-const services = [
-  {
-    id: "signature", cat: "massages", price: 60, duration: 70, slotMinutes: 70,
-    name: { fr: "Massage signature Nyanga", en: "Nyanga signature massage" },
-    sub: { fr: "Pressothérapie + modelage", en: "Pressotherapy + massage" },
-    desc: {
-      fr: "15 minutes de pressothérapie sur siège pour stimuler la circulation et préparer le corps, puis notre massage signature.",
-      en: "15 minutes of seated pressotherapy to boost circulation and prepare the body, followed by our signature massage."
-    }
-  },
-  {
-    id: "relaxant", cat: "massages", price: 50, duration: 60, slotMinutes: 60,
-    name: { fr: "Massage relaxant", en: "Relaxing massage" },
-    desc: {
-      fr: "Un voyage sensoriel pour libérer les tensions accumulées.",
-      en: "A sensory journey to release built-up tension."
-    }
-  },
-  {
-    id: "sportif", cat: "massages", price: 70, duration: 60, slotMinutes: 60,
-    name: { fr: "Massage sportif", en: "Sports massage" },
-    desc: {
-      fr: "Conçu pour les corps actifs : pétrissage profond et friction ciblée pour favoriser la récupération musculaire, améliorer la souplesse et prévenir les blessures.",
-      en: "Designed for active bodies: deep kneading and targeted friction to support muscle recovery, improve flexibility and prevent injury."
-    }
-  },
-  {
-    id: "headspa-decouverte", cat: "headspa", price: 55, duration: 45, slotMinutes: 45,
-    name: { fr: "Head spa découverte", en: "Head spa discovery" },
-    sub: { fr: "Méthode Shiatsu", en: "Shiatsu method" },
-    desc: {
-      fr: "Initiation au rituel : soin du cuir chevelu pour nourrir et revitaliser les racines, sur table head spa massante et chauffante.",
-      en: "An introduction to the ritual: scalp care to nourish and revitalise the roots, on a heated massage head spa table."
-    }
-  },
-  {
-    id: "headspa-detente", cat: "headspa", price: 80, duration: 60, slotMinutes: 60,
-    name: { fr: "Head spa détente", en: "Head spa relax" },
-    sub: { fr: "Méthode Shiatsu", en: "Shiatsu method" },
-    desc: {
-      fr: "Head spa découverte + modelage des épaules.",
-      en: "Head spa discovery + shoulder massage."
-    }
-  },
-  {
-    id: "headspa-voyage", cat: "headspa", price: 95, duration: 90, slotMinutes: 90,
-    name: { fr: "Head spa voyage", en: "Head spa journey" },
-    sub: { fr: "Méthode Shiatsu", en: "Shiatsu method" },
-    desc: {
-      fr: "Head spa détente complet + rituel visage.",
-      en: "The full head spa relax + facial ritual."
-    }
-  },
-  {
-    id: "hammam", cat: "soins", price: 70, duration: 60, slotMinutes: 60,
-    name: { fr: "Hammam - Gommage", en: "Hammam - Body scrub" },
-    desc: {
-      fr: "Vapeur chaude pour ouvrir les pores et détendre les muscles en profondeur, puis exfoliation corporelle.",
-      en: "Warm steam to open the pores and deeply relax the muscles, followed by a full body exfoliation."
-    }
-  },
-  {
-    id: "pieds", cat: "soins", price: 50, duration: null, slotMinutes: 60,
-    name: { fr: "Rituel pieds", en: "Foot ritual" },
-    desc: {
-      fr: "Massage des pieds à l'huile chaude, vernis semi-permanent inclus.",
-      en: "Warm oil foot massage, semi-permanent polish included."
-    }
-  },
-  {
-    id: "mains", cat: "soins", price: 50, duration: null, slotMinutes: 60,
-    name: { fr: "Rituel mains", en: "Hand ritual" },
-    desc: {
-      fr: "Soin à la paraffine, vernis semi-permanent inclus.",
-      en: "Paraffin treatment, semi-permanent polish included."
-    }
-  },
-  {
-    id: "visage", cat: "soins", price: 40, duration: null, slotMinutes: 45,
-    name: { fr: "Rituel visage", en: "Facial ritual" },
-    desc: {
-      fr: "Avec vapozone et luminothérapie.",
-      en: "With vapozone steam and light therapy."
-    }
-  },
-  {
-    id: "tresses", cat: "soins", price: 30, duration: null, slotMinutes: 60,
-    name: { fr: "Tresses africaines", en: "African braids" },
-    desc: {
-      fr: "Tous types de tresses.",
-      en: "All types of braids."
-    }
-  }
-];
-
+const { categories, services } = CATALOG_DATA;
 const byId = new Map(services.map((s) => [s.id, s]));
 
 function getService(id) {
   return byId.get(id) || null;
 }
 
-/** Valida una lista de ids y devuelve los soins con totales en céntimos. */
 function priceSelection(ids) {
   if (!Array.isArray(ids) || ids.length === 0) throw new Error("services_required");
   if (ids.length > 6) throw new Error("too_many_services");
@@ -289,7 +392,7 @@ module.exports = { categories, services, getService, priceSelection };
 window.__NYANGA_MODULES.catalog = module.exports;
 })({ exports: {} });
 
-/* server/ics.js */
+/* lib/ics.js */
 (function (module) {
 "use strict";
 
@@ -478,7 +581,7 @@ window.__NYANGA_MODULES.ics = module.exports;
   Reproduce /api/* en el navegador con la misma lógica del servidor
   (catálogo, festivos, horarios, carte cadeau, agenda .ics).
   Las reservas se guardan solo en este navegador (localStorage).
-  Se incluye en docs/js/demo-api.js mediante scripts/build-demo.js.
+  Se incluye en docs/js/demo-api.js mediante demo/build-demo.mjs.
 */
 (function () {
   "use strict";
@@ -583,7 +686,7 @@ window.__NYANGA_MODULES.ics = module.exports;
     }
     if (input.acceptDeposit !== true) fields.push("acceptDeposit");
     if (fields.length) throw err(400, "invalid_fields", { fields: fields });
-    return { lang: input.lang === "en" ? "en" : "fr", mode: mode, sel: sel, date: input.date, start: input.start, client: client, gift: gift };
+    return { lang: input.lang === "en" ? "en" : "fr", mode: mode, sel: sel, date: input.date, start: input.start, client: client, gift: gift, payFull: input.payFull === true };
   }
 
   function paymentUrl(b) {
@@ -614,7 +717,10 @@ window.__NYANGA_MODULES.ics = module.exports;
       giftName: b.mode === "gift" ? b.gift_name : undefined,
       giftCode: ok ? (b.gift_code || undefined) : undefined,
       holdExpiresAt: b.status === "pending_payment" ? b.hold_expires_at : undefined,
-      calendar: b.status === "confirmed" ? calendarLinks(b) : undefined
+      calendar: b.status === "confirmed" ? calendarLinks(b) : undefined,
+      paidFull: !!b.pay_full,
+      clientName: b.mode === "gift" ? b.client_name : undefined,
+      giftMessage: b.mode === "gift" ? (b.gift_message || undefined) : undefined
     };
   }
 
@@ -668,7 +774,7 @@ window.__NYANGA_MODULES.ics = module.exports;
         services_json: JSON.stringify(v.sel.items.map(function (s) {
           return { id: s.id, name: s.name, priceCents: Math.round(s.price * 100), minutes: s.slotMinutes };
         })),
-        total_cents: total, deposit_cents: Math.round(total * CONFIG.depositRate),
+        total_cents: total, deposit_cents: v.payFull ? total : Math.round(total * CONFIG.depositRate), pay_full: v.payFull ? 1 : 0,
         client_name: v.client.name, client_email: v.client.email, client_phone: v.client.phone,
         gift_name: v.gift && v.gift.name, gift_age: v.gift && v.gift.age,
         gift_email: v.gift && v.gift.email, gift_message: v.gift && v.gift.message

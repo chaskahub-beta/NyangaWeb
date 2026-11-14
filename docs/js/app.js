@@ -112,6 +112,7 @@
     check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     wait: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>',
     alert: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.5"/></svg>',
+    share: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>',
     calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13.5v4M10 15.5h4"/></svg>'
   };
 
@@ -246,6 +247,7 @@
       error: null,
       form: {},
       accepted: false,
+      payFull: false,       // opción secundaria: pagar el total por adelantado
       submitting: false,
       result: null          // { id, t, status, data }
     };
@@ -260,6 +262,8 @@
   }
 
   function depositCents() { return Math.round(total() * 100 * CATALOG.depositRate); }
+  /** Lo que se paga ahora en SumUp: el acompte o el total */
+  function payNowCents() { return B.payFull ? Math.round(total() * 100) : depositCents(); }
 
   function openBooking(opts) {
     if (!CATALOG) return;
@@ -487,6 +491,7 @@
     summary: function () {
       var f = B.form;
       var dep = depositCents();
+      var now = payNowCents();
       var rows = "";
       rows += row(t("b.summary.for"), B.mode === "gift" ? t("b.summary.gift") + " " + esc(f.gName) : t("b.summary.me"));
       B.selected.forEach(function (id) {
@@ -495,15 +500,27 @@
       });
       rows += row(t("b.summary.date"), esc(longDate(B.date)) + " · " + B.slot);
       rows += row(t("b.summary.total"), eur(total()), "total");
-      rows += row(t("b.summary.rest"), eurCents(total() * 100 - dep));
-      rows += row(t("b.summary.deposit"), eurCents(dep), "deposit");
+      rows += row(t("b.summary.rest"), B.payFull ? t("b.summary.nothingLeft") : eurCents(total() * 100 - dep));
+      rows += row(t(B.payFull ? "b.summary.payFullNow" : "b.summary.deposit"), eurCents(now), "deposit");
+
+      // Acompte del 20 % (recomendado) o, como segunda opción, todo por adelantado
+      var options = '<fieldset class="pay-options"><legend>' + t("b.summary.payHow") + '</legend>' +
+        payOption("deposit", !B.payFull, t("b.summary.optDeposit").replace("{amount}", eurCents(dep)),
+          t("b.summary.optDepositHint").replace("{amount}", eurCents(total() * 100 - dep))) +
+        payOption("full", B.payFull, t("b.summary.optFull").replace("{amount}", eur(total())), t("b.summary.optFullHint")) +
+        '</fieldset>';
+
+      function payOption(value, checked, title, hint) {
+        return '<label class="pay-option"><input type="radio" name="pay-mode" value="' + value + '" data-action="pay-mode"' + (checked ? " checked" : "") + '>' +
+          '<span><strong>' + title + '</strong><small>' + hint + '</small></span></label>';
+      }
 
       function row(a, b, cls) {
         return '<div class="summary-row' + (cls ? " " + cls : "") + '"><span>' + a + '</span><span>' + b + '</span></div>';
       }
 
       return (B.error ? '<p class="notice warm" role="alert">' + esc(B.error) + '</p>' : '') +
-        '<div class="summary">' + rows + '</div>' +
+        '<div class="summary">' + rows + '</div>' + options +
         '<label class="check"><input type="checkbox" id="accept-terms" data-action="accept"' + (B.accepted ? " checked" : "") + '>' +
         '<span>' + t("b.summary.terms") + '</span></label>' +
         (B.mode === "gift" ? '<p class="notice warm">' + t("b.summary.giftTerms") + '</p>' : '') +
@@ -520,7 +537,7 @@
       if (d.status === "confirmed" || d.status === "completed") {
         var html = '<div class="done">' +
           '<div class="done-mark">' + ICON.check + '</div>' +
-          '<p>' + t("b.done.text") + '</p>' +
+          '<p>' + t(d.paidFull ? "b.done.textFull" : "b.done.text") + '</p>' +
           resultSummary(d);
         if (d.mode === "gift" && d.giftCode) {
           html += '<div class="gift-card">' +
@@ -528,9 +545,11 @@
             '<span class="gift-code">' + esc(d.giftCode) + '</span>' +
             '<span>' + t("b.done.giftFor") + ' ' + esc(d.giftName) + '</span>' +
             '<small>' + t("b.done.validOn") + ' ' + esc(longDate(d.date)) + ' · ' + esc(d.start) + '</small>' +
+            (d.restCents > 0 ? '<small class="gift-rest">' + t("b.done.giftRest").replace("{amount}", eurCents(d.restCents)) + '</small>' : '') +
             '<small>' + t("b.done.giftSent") + '</small>' +
             '</div>' +
-            '<p class="fine">' + t("b.summary.giftTerms") + '</p>';
+            '<p class="fine">' + t("b.summary.giftTerms") + '</p>' +
+            shareBlock(d);
         }
         if (d.calendar) {
           html += '<div class="add-cal">' +
@@ -570,15 +589,56 @@
         return '<div class="summary-row"><span>' + esc(L(s.name)) + '</span><span>' + eurCents(s.priceCents) + '</span></div>';
       }).join("") +
       '<div class="summary-row total"><span>' + t("b.summary.total") + '</span><span>' + eurCents(d.totalCents) + '</span></div>' +
-      '<div class="summary-row"><span>' + t(d.status === "confirmed" || d.status === "completed" ? "b.summary.depositPaid" : "b.summary.deposit") + '</span><span>' + eurCents(d.depositCents) + '</span></div>' +
-      '<div class="summary-row"><span>' + t("b.summary.rest") + '</span><span>' + eurCents(d.restCents) + '</span></div>' +
+      '<div class="summary-row"><span>' + t(paidLabel(d)) + '</span><span>' + eurCents(d.depositCents) + '</span></div>' +
+      '<div class="summary-row"><span>' + t("b.summary.rest") + '</span><span>' + (d.restCents > 0 ? eurCents(d.restCents) : t("b.summary.nothingLeft")) + '</span></div>' +
       '</div>';
+  }
+
+  function paidLabel(d) {
+    var paid = d.status === "confirmed" || d.status === "completed";
+    if (d.paidFull) return paid ? "b.summary.paidFull" : "b.summary.payFullNow";
+    return paid ? "b.summary.depositPaid" : "b.summary.deposit";
+  }
+
+  /* ----- Mensaje listo para enviar al beneficiario de la carte cadeau ----- */
+
+  function shareText(d) {
+    var names = d.services.map(function (s) { return L(s.name); }).join(" + ");
+    var lines = [
+      t("b.share.hello").replace("{name}", d.giftName),
+      t("b.share.offer").replace("{services}", names),
+      t("b.share.when").replace("{date}", longDate(d.date)).replace("{time}", d.start),
+      t("b.share.code").replace("{code}", d.giftCode),
+      d.restCents > 0 ? t("b.share.rest").replace("{amount}", eurCents(d.restCents)) : t("b.share.paid")
+    ];
+    if (d.giftMessage) lines.push("« " + d.giftMessage + " »");
+    if (d.clientName) lines.push("— " + d.clientName);
+    return lines.join("\n");
+  }
+
+  function shareBlock(d) {
+    var text = shareText(d);
+    var enc = encodeURIComponent(text);
+    var subject = encodeURIComponent(t("b.share.subject"));
+    return '<div class="share-gift">' +
+      '<span class="eyebrow">' + esc(t("b.share.title").replace("{name}", d.giftName)) + '</span>' +
+      '<p class="fine">' + t("b.share.intro") + '</p>' +
+      '<p class="share-text" id="share-text">' + esc(text) + '</p>' +
+      '<div class="share-btns">' +
+        (navigator.share ? '<button class="btn btn-dark" data-action="share-native">' + ICON.share + t("b.share.native") + '</button>' : '') +
+        '<a class="btn btn-outline" href="https://wa.me/?text=' + enc + '" target="_blank" rel="noopener">WhatsApp</a>' +
+        '<a class="btn btn-outline" href="sms:?&body=' + enc + '">' + t("b.share.sms") + '</a>' +
+        '<a class="btn btn-outline" href="mailto:?subject=' + subject + '&body=' + enc + '">' + t("b.share.email") + '</a>' +
+        '<button class="btn btn-outline" data-action="share-copy">' + t("b.share.copy") + '</button>' +
+      '</div>' +
+      '<small class="share-status" id="share-status" role="status" aria-live="polite"></small>' +
+    '</div>';
   }
 
   function updateFooter() {
     var step = STEPS[B.step];
     btnBack.hidden = B.step === 0 || step === "result";
-    if (step === "summary") btnNext.textContent = B.submitting ? t("b.redirecting") : t("b.pay");
+    if (step === "summary") btnNext.textContent = B.submitting ? t("b.redirecting") : t(B.payFull ? "b.payFull" : "b.pay");
     else if (step === "result") btnNext.textContent = t("b.finish");
     else btnNext.textContent = t("b.next");
     btnNext.disabled = !canNext();
@@ -620,7 +680,8 @@
       date: B.date,
       start: B.slot,
       client: { name: f.name, email: f.email, phone: f.phone },
-      acceptDeposit: B.accepted
+      acceptDeposit: B.accepted,
+      payFull: B.payFull
     };
     if (B.mode === "gift") body.gift = { name: f.gName, age: Number(f.gAge), email: f.gEmail, message: f.gMessage || "" };
 
@@ -734,6 +795,18 @@
       renderBooking(true);
     } else if (a === "retry") {
       retryPayment();
+    } else if (a === "share-copy" || a === "share-native") {
+      var text = shareText(B.result.data);
+      var status = document.getElementById("share-status");
+      if (a === "share-native" && navigator.share) {
+        navigator.share({ title: t("b.share.subject"), text: text }).catch(function () { /* cancelado */ });
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function () {
+          if (status) status.textContent = t("b.share.copied");
+        }, function () { selectShareText(); });
+      } else {
+        selectShareText();
+      }
     }
   });
 
@@ -752,6 +825,9 @@
     } else if (el.dataset.action === "accept") {
       B.accepted = el.checked;
       updateFooter();
+    } else if (el.dataset.action === "pay-mode") {
+      B.payFull = el.value === "full";
+      renderBooking(true);
     }
   });
 
@@ -771,6 +847,16 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !sheet.hidden) closeBooking();
   });
+
+  function selectShareText() {
+    var p = document.getElementById("share-text");
+    if (!p) return;
+    var range = document.createRange();
+    range.selectNodeContents(p);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
 
   /* ---------- Eventos generales ---------- */
 
