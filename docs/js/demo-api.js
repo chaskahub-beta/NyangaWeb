@@ -595,7 +595,7 @@ window.__NYANGA_MODULES.ics = module.exports;
     depositRate: 0.2,
     windowDays: 90,
     holdMinutes: 30,
-    address: "Nyanga Beauty & Spa, Granges-Narboz, France",
+    address: "Nyanga Beauty & Spa, 2 impasse des Charmilles, 25300 Granges-Narboz, France",
     settings: {
       openingHours: { 0: [], 1: [["09:30", "18:30"]], 2: [["09:30", "18:30"]], 3: [["09:30", "18:30"]], 4: [["09:30", "18:30"]], 5: [["09:30", "18:30"]], 6: [] },
       slotStep: 30,

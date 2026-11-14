@@ -38,7 +38,8 @@ window.NYANGA_I18N = {
     "contact.address": "Adresse",
     "contact.hours": "Horaires",
     "contact.closed": "Fermé le week-end et les jours fériés",
-    "contact.map": "aquí mapa",
+    "contact.mapTitle": "Plan d'accès : 2 impasse des Charmilles, 25300 Granges-Narboz",
+    "contact.appleMaps": "Plans (iPhone)",
 
     "legal.mentions": "Mentions légales",
     "legal.cgv": "CGV",
@@ -194,7 +195,8 @@ window.NYANGA_I18N = {
     "contact.address": "Address",
     "contact.hours": "Hours",
     "contact.closed": "Closed on weekends and public holidays",
-    "contact.map": "aquí mapa",
+    "contact.mapTitle": "Map: 2 impasse des Charmilles, 25300 Granges-Narboz",
+    "contact.appleMaps": "Apple Maps",
 
     "legal.mentions": "Legal notice",
     "legal.cgv": "Terms of sale",

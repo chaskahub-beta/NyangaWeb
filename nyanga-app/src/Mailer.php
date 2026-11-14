@@ -168,6 +168,11 @@ final class Mailer
     {
         $titleHtml = self::esc(mb_strtoupper($title[0], 'UTF-8')) . '<br>' . self::esc(mb_strtoupper($title[1], 'UTF-8'));
         $address = self::esc($this->config['business_address']);
+        $phone = (string) ($this->config['business_phone'] ?? '');
+        if ($phone !== '') {
+            $tel = '+33' . substr(preg_replace('/\D/', '', $phone), 1);
+            $address .= ' · <a href="tel:' . self::esc($tel) . '" style="color:' . self::CREAM . ';text-decoration:none">' . self::esc($phone) . '</a>';
+        }
         $strips = '';
         foreach (['strip-1.jpg', 'strip-2.jpg', 'strip-3.jpg'] as $i => $s) {
             $strips .= '<td width="48" style="padding-left:' . ($i ? 6 : 0) . 'px"><img src="' . $this->img($s) . '" width="48" height="280" alt="" style="display:block;border:0;width:48px;height:280px;border-radius:2px"></td>';

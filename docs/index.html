@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap">
-  <link rel="stylesheet" href="css/styles.css?v=20261114d">
+  <link rel="stylesheet" href="css/styles.css?v=20261114e">
   <link rel="stylesheet" href="css/demo.css">
 </head>
 <body>
@@ -168,11 +168,11 @@
           <ul class="contact-list">
             <li>
               <span class="contact-label" data-i18n="contact.phone">Téléphone</span>
-              <span class="contact-value">[Téléphone]</span>
+              <a class="contact-value" href="tel:+33664297767">06 64 29 77 67</a>
             </li>
             <li>
               <span class="contact-label" data-i18n="contact.address">Adresse</span>
-              <span class="contact-value">[Adresse]<br>Granges-Narboz</span>
+              <span class="contact-value">2 impasse des Charmilles<br>25300 Granges-Narboz</span>
             </li>
             <li>
               <span class="contact-label" data-i18n="contact.hours">Horaires</span>
@@ -187,7 +187,14 @@
               <a class="contact-value" href="https://www.tiktok.com/@lynn.langlais" target="_blank" rel="noopener">@lynn.langlais</a>
             </li>
           </ul>
-          <div class="ph ph-map" data-i18n="contact.map">aquí mapa</div>
+          <div class="map">
+            <iframe class="map-frame" src="https://www.openstreetmap.org/export/embed.html?bbox=6.31497%2C46.87960%2C6.32697%2C46.88520&amp;layer=mapnik&amp;marker=46.8824039%2C6.3209667" title="Plan d'accès : 2 impasse des Charmilles, 25300 Granges-Narboz" data-i18n-title="contact.mapTitle" loading="lazy" referrerpolicy="no-referrer"></iframe>
+            <div class="map-links">
+              <a class="btn btn-outline" href="https://www.google.com/maps/search/?api=1&amp;query=2%20impasse%20des%20Charmilles%2C%2025300%20Granges-Narboz%2C%20France" target="_blank" rel="noopener">Google Maps</a>
+              <a class="btn btn-outline" href="https://maps.apple.com/?q=Nyanga%20Beauty%20%26%20Spa&amp;address=2%20impasse%20des%20Charmilles%2C%2025300%20Granges-Narboz%2C%20France&amp;ll=46.8824039,6.3209667" target="_blank" rel="noopener" data-i18n="contact.appleMaps">Plans (iPhone)</a>
+              <a class="btn btn-outline" href="https://waze.com/ul?ll=46.8824039%2C6.3209667&amp;navigate=yes" target="_blank" rel="noopener">Waze</a>
+            </div>
+          </div>
           <div class="contact-cta">
             <button class="btn btn-dark" data-action="open-booking" data-mode="me" data-i18n="home.ctaBook">Réserver un soin</button>
             <button class="btn btn-outline" data-action="open-booking" data-mode="gift" data-i18n="home.ctaGift">Offrir une carte cadeau</button>
@@ -228,8 +235,8 @@
 
   <script src="js/demo-api.js"></script>
 
-  <script src="js/data.js?v=20261114d"></script>
-  <script src="js/i18n.js?v=20261114d"></script>
-  <script src="js/app.js?v=20261114d"></script>
+  <script src="js/data.js?v=20261114e"></script>
+  <script src="js/i18n.js?v=20261114e"></script>
+  <script src="js/app.js?v=20261114e"></script>
 </body>
 </html>

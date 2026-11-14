@@ -943,7 +943,18 @@ a.contact-value {
 
 a.contact-value:hover { text-decoration: underline; }
 
-.ph-map { aspect-ratio: 16 / 9; max-width: 100%; }
+/* Plan d'accès (OpenStreetMap, sans cookies de suivi) */
+.map { display: flex; flex-direction: column; gap: 10px; }
+.map-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-sm);
+  background: var(--cream-2);
+}
+.map-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.map-links .btn { flex: 1 1 110px; min-height: 40px; padding: 8px 14px; font-size: .86rem; text-decoration: none; }
 
 .contact-cta {
   display: grid;

@@ -10,7 +10,9 @@ return [
     'public_url' => 'https://www.mi-dominio.fr',
 
     // Dirección que aparece en el evento de agenda (.ics / Google)
-    'business_address' => 'Nyanga Beauty & Spa, Granges-Narboz, France',
+    'business_address' => 'Nyanga Beauty & Spa, 2 impasse des Charmilles, 25300 Granges-Narboz, France',
+    // Teléfono que aparece en el pie de los correos
+    'business_phone' => '06 64 29 77 67',
 
     // Base de datos MySQL (cPanel → Bases de datos MySQL)
     'db' => [
