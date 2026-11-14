@@ -1,0 +1,15 @@
+# Uso local o demo:  docker compose up -d --build   →  http://localhost:5500
+name: nyanga
+services:
+  web:
+    build: .
+    image: nyanga-beauty-spa
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "5500:5500"
+    volumes:
+      - nyanga-data:/app/data
+
+volumes:
+  nyanga-data:
