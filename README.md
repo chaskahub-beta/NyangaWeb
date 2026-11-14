@@ -95,6 +95,8 @@ no hay pagos ni correos reales y aparece una franja «Démo». Sirve para que la
 2. En GitHub: *Settings → Pages → Build and deployment → Deploy from a branch* → rama `main`, carpeta **`/docs`** → *Save*.
 3. En 1–2 minutos la demo está en `https://<usuario>.github.io/<repositorio>/`.
 
+Si Pages quedó publicando la raíz (`/ (root)`), también funciona: el `index.html` de la raíz redirige a `docs/`.
+
 Después de cambiar algo en `public/`, regenerar la demo antes de subir:
 
 ```bash
