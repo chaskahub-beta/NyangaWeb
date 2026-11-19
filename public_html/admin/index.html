@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Panel · Nyanga Beauty</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@300;400;500&display=swap">
-  <link rel="stylesheet" href="admin.css?v=20261114e">
+  <link rel="stylesheet" href="admin.css?v=20261119b">
 </head>
 <body>
 
@@ -29,6 +29,7 @@
         <button class="tab" data-tab="agenda" aria-current="page">Agenda</button>
         <button class="tab" data-tab="calendrier">Calendrier</button>
         <button class="tab" data-tab="cadeaux">Cartes cadeau</button>
+        <button class="tab" data-tab="soins">Soins</button>
         <button class="tab" data-tab="reglages">Réglages</button>
       </nav>
       <button class="btn btn-ghost" id="logout">Déconnexion</button>
@@ -46,6 +47,7 @@
               <option value="today">Aujourd'hui</option>
               <option value="active">Paiements en cours + confirmées</option>
               <option value="cancelled">Annulées</option>
+              <option value="refunded">Remboursées</option>
               <option value="past">30 derniers jours</option>
             </select>
           </label>
@@ -81,6 +83,18 @@
           <button class="btn btn-dark" type="submit">Rechercher</button>
         </form>
         <div id="gift-result"></div>
+        <h2 class="sub-title">À planifier</h2>
+        <p class="hint">Cartes cadeau payées dont le bénéficiaire n'a pas encore choisi sa date (valables 1 an). Cliquez pour voir la fiche et copier son lien.</p>
+        <div id="gift-pending" class="agenda-items"></div>
+      </section>
+
+      <!-- Soins : prix, nom, description, durée, catégorie et ordre -->
+      <section class="panel" id="tab-soins" hidden>
+        <div class="toolbar">
+          <p class="hint">Les changements sont visibles tout de suite sur le site. Les rendez-vous déjà réservés gardent leur nom et leur prix.</p>
+          <button class="btn btn-dark" id="svc-add">+ Ajouter un soin</button>
+        </div>
+        <div id="svc-list" class="svc-list"></div>
       </section>
 
       <!-- Réglages -->
@@ -120,6 +134,6 @@
     <div class="drawer-body" id="drawer-body"></div>
   </aside>
 
-  <script src="admin.js?v=20261114e"></script>
+  <script src="admin.js?v=20261119b"></script>
 </body>
 </html>

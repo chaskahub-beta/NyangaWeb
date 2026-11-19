@@ -141,7 +141,8 @@
 
   function renderStories() {
     document.getElementById("stories").innerHTML = CFG.stories.map(function (s) {
-      return '<button class="story" data-action="story" data-cat="' + s.cat + '">' +
+      var act = s.target ? 'data-action="scroll-to" data-target="' + s.target + '"' : 'data-action="story" data-cat="' + s.cat + '"';
+      return '<button class="story" ' + act + '>' +
         '<span class="story-ring"><img src="' + s.img + '" width="220" height="220" alt="" loading="lazy"></span>' +
         '<span>' + esc(L(s)) + '</span></button>';
     }).join("");
@@ -154,7 +155,7 @@
       return '<article class="post">' +
         (CFG.photos[s.id] ? '<img class="post-img" src="' + CFG.photos[s.id] + '" width="900" height="562" alt="" loading="lazy">' : '') +
         '<div class="post-body">' +
-          '<div class="post-top"><h3>' + esc(L(s.name)) + '</h3><span class="price">' + eur(s.price) + '</span></div>' +
+          '<div class="post-top"><h3>' + esc(L(s.name)) + '</h3><span class="price">' + priceLabel(s) + '</span></div>' +
           '<p>' + esc(L(s.desc)) + '</p>' +
           '<div class="post-foot"><span class="meta">' + durationText(s) + '</span>' +
           '<button class="btn btn-dark" data-action="open-booking" data-service="' + s.id + '">' + t("services.book") + '</button></div>' +
@@ -175,7 +176,7 @@
   function serviceCard(s) {
     return '<article class="service">' +
       '<div><h3>' + esc(L(s.name)) + '</h3>' + (s.sub ? '<div class="sub">' + esc(L(s.sub)) + '</div>' : '') + '</div>' +
-      '<span class="price">' + eur(s.price) + '</span>' +
+      '<span class="price">' + priceLabel(s) + '</span>' +
       '<p>' + esc(L(s.desc)) + '</p>' +
       '<div class="service-foot"><span class="meta">' + durationText(s) + '</span>' +
       '<button class="btn btn-dark" data-action="open-booking" data-service="' + s.id + '">' + t("services.book") + '</button></div>' +
@@ -200,6 +201,9 @@
     document.querySelectorAll("[data-i18n]").forEach(function (el) {
       el.textContent = t(el.dataset.i18n);
     });
+    document.querySelectorAll("[data-wa-text]").forEach(function (el) {
+      el.setAttribute("href", waUrl(t(el.dataset.waText)));
+    });
     document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
       el.setAttribute("title", t(el.dataset.i18nTitle));
     });
@@ -214,14 +218,59 @@
     renderFeatured();
     renderChips();
     renderServices();
+    renderHours();
     if (!sheet.hidden) renderBooking(true);
   }
+
+  /* ----- Horario de Contact: viene de los Réglages del panel ----- */
+
+  function fmtTime(hm) {
+    if (lang === "en") return hm;
+    var p = hm.split(":");
+    return Number(p[0]) + "h" + p[1];
+  }
+
+  function renderHours() {
+    var targets = [document.getElementById("contact-hours"), document.getElementById("home-hours")].filter(Boolean);
+    if (!targets.length || !CATALOG || !CATALOG.hours) return;
+    var names = t("days").split(",");            // dimanche … samedi
+    var order = [1, 2, 3, 4, 5, 6, 0];
+    var groups = [];                              // días seguidos con el mismo horario
+    order.forEach(function (d) {
+      var ranges = CATALOG.hours[d] || [];
+      var txt = ranges.map(function (r) { return fmtTime(r[0]) + " – " + fmtTime(r[1]); }).join(" · ");
+      var last = groups[groups.length - 1];
+      if (last && last.txt === txt) last.days.push(d); else groups.push({ txt: txt, days: [d] });
+    });
+    var lines = [], closed = [];
+    groups.forEach(function (g) {
+      var label = names[g.days[0]] + (g.days.length > 1 ? " – " + names[g.days[g.days.length - 1]] : "");
+      if (g.txt) lines.push('<span class="hours-line"><span>' + esc(cap(label)) + '</span> ' + esc(g.txt) + '</span>');
+      else g.days.forEach(function (d) { closed.push(names[d]); });
+    });
+    var closedText = closed.length
+      ? t("contact.closedDays").replace("{days}", closed.join(", "))
+      : t("contact.closedHolidays");
+    var html = lines.join("") + '<span class="hours-closed">' + esc(closedText) + '</span>';
+    targets.forEach(function (el) { el.innerHTML = html; });
+  }
+
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
   /* ============================================================
      Flujo de reserva
      ============================================================ */
 
-  var STEPS = ["who", "services", "date", "details", "summary", "result"];
+  // Pasos según el flujo: pour moi, carte cadeau (sin fecha) o beneficiario que usa su carte cadeau
+  var FLOWS = {
+    me: ["who", "services", "date", "details", "summary", "result"],
+    gift: ["who", "services", "details", "summary", "result"],
+    redeem: ["redeem", "date", "redeemSummary", "result"]
+  };
+  function steps() {
+    if (B && B.flow === "redeem") return FLOWS.redeem;
+    return B && B.mode === "gift" ? FLOWS.gift : FLOWS.me;
+  }
 
   var sheet = document.getElementById("sheet");
   var backdrop = document.getElementById("sheet-backdrop");
@@ -251,12 +300,16 @@
       form: {},
       accepted: false,
       payFull: false,       // opción secundaria: pagar el total por adelantado
+      flow: opts.flow || null,   // "redeem" = el beneficiario elige su día con su carte cadeau
+      redeem: null,         // datos de la carte cadeau verificada
+      redeemDone: null,     // respuesta tras reservar con la carte cadeau
       submitting: false,
       result: null          // { id, t, status, data }
     };
   }
 
   function minutes() {
+    if (B.flow === "redeem") return B.redeem ? B.redeem.minutes : 0;
     return B.selected.reduce(function (sum, id) { var s = serviceById(id); return sum + (s ? s.slotMinutes : 0); }, 0);
   }
 
@@ -266,7 +319,17 @@
 
   function depositCents() { return Math.round(total() * 100 * CATALOG.depositRate); }
   /** Lo que se paga ahora en SumUp: el acompte o el total */
-  function payNowCents() { return B.payFull ? Math.round(total() * 100) : depositCents(); }
+  function payNowCents() { return (B.payFull || B.mode === "gift") ? Math.round(total() * 100) : depositCents(); }
+
+  /** Precio con « dès » para los soins « à partir de » */
+  function priceLabel(s) { return (s.priceFrom ? t("price.from") + " " : "") + eur(s.price); }
+
+  function waUrl(text) {
+    return "https://wa.me/" + CFG.whatsapp + (text ? "?text=" + encodeURIComponent(text) : "");
+  }
+  function helpLine() {
+    return '<p class="fine help-wa">' + t("help.wa") + ' <a href="' + waUrl(t("help.waText")) + '" target="_blank" rel="noopener">WhatsApp · 06 64 29 77 67</a></p>';
+  }
 
   function openBooking(opts) {
     if (!CATALOG) return;
@@ -289,7 +352,7 @@
     sheet.hidden = true;
     backdrop.hidden = true;
     document.body.classList.remove("sheet-open");
-    if (B && B.result) {
+    if (B && (B.result || B.flow === "redeem")) {
       // Quita ?reservation=… de la dirección
       try { history.replaceState(null, "", location.pathname + location.hash); } catch (e) { /* ignore */ }
     }
@@ -303,7 +366,7 @@
 
   function canNext() {
     var f = B.form;
-    switch (STEPS[B.step]) {
+    switch (steps()[B.step]) {
       case "who": return !!B.mode;
       case "services": return B.selected.length > 0;
       case "date": return !!(B.date && B.slot);
@@ -315,6 +378,8 @@
         }
         return ok;
       case "summary": return B.accepted && !B.submitting;
+      case "redeem": return filled(f.rName) && (f.rCode || "").replace(/[^a-z0-9]/gi, "").length >= 8 && !B.submitting;
+      case "redeemSummary": return !B.submitting && !!(B.date && B.slot);
       default: return true;
     }
   }
@@ -333,12 +398,12 @@
       if (current !== B) return;
       B.monthData[key] = data;
       B.loading = false;
-      if (STEPS[B.step] === "date") renderBooking(true);
+      if (steps()[B.step] === "date") renderBooking(true);
     }, function (err) {
       if (current !== B) return;
       B.loading = false;
       B.error = errorText(err.code);
-      if (STEPS[B.step] === "date") renderBooking(true);
+      if (steps()[B.step] === "date") renderBooking(true);
     });
   }
 
@@ -372,7 +437,8 @@
         '<div class="choice-grid">' +
           choice("me", ICON.me, t("b.who.me"), t("b.who.meText")) +
           choice("gift", ICON.gift, t("b.who.gift"), t("b.who.giftText")) +
-        '</div>';
+        '</div>' +
+        '<p class="fine redeem-link"><button class="link" data-action="open-redeem">' + t("b.who.haveGift") + '</button></p>';
     },
 
     services: function () {
@@ -384,7 +450,7 @@
           html += '<label class="pick">' +
             '<input type="checkbox" id="pick-' + s.id + '" data-service="' + s.id + '"' + (checked ? " checked" : "") + '>' +
             '<span class="pick-name"><b>' + esc(L(s.name)) + '</b>' + (s.duration ? '<small>' + durationText(s) + '</small>' : '') + '</span>' +
-            '<span class="price">' + eur(s.price) + '</span></label>';
+            '<span class="price">' + priceLabel(s) + '</span></label>';
         });
         html += '</div>';
       });
@@ -393,7 +459,9 @@
 
     date: function () {
       var html = '<p class="step-intro">' + t("b.date.intro") + '</p>';
-      if (B.mode === "gift") html += '<p class="notice warm">' + t("b.date.giftNote") + '</p>';
+      if (B.flow === "redeem" && B.redeem && B.redeem.expiresAt) {
+        html += '<p class="notice">' + t("b.redeem.validUntil").replace("{date}", esc(longDate(B.redeem.expiresAt))) + '</p>';
+      }
       if (B.error) html += '<p class="notice warm" role="alert">' + esc(B.error) + '</p>';
 
       if (!B.month) {
@@ -499,12 +567,15 @@
       rows += row(t("b.summary.for"), B.mode === "gift" ? t("b.summary.gift") + " " + esc(f.gName) : t("b.summary.me"));
       B.selected.forEach(function (id) {
         var s = serviceById(id);
-        rows += row(esc(L(s.name)), eur(s.price));
+        rows += row(esc(L(s.name)), priceLabel(s));
       });
-      rows += row(t("b.summary.date"), esc(longDate(B.date)) + " · " + B.slot);
+      var gift = B.mode === "gift";
+      if (!gift) rows += row(t("b.summary.date"), esc(longDate(B.date)) + " · " + B.slot);
       rows += row(t("b.summary.total"), eur(total()), "total");
-      rows += row(t("b.summary.rest"), B.payFull ? t("b.summary.nothingLeft") : eurCents(total() * 100 - dep));
-      rows += row(t(B.payFull ? "b.summary.payFullNow" : "b.summary.deposit"), eurCents(now), "deposit");
+      if (!gift) rows += row(t("b.summary.rest"), B.payFull ? t("b.summary.nothingLeft") : eurCents(total() * 100 - dep));
+      rows += row(t(gift || B.payFull ? "b.summary.payFullNow" : "b.summary.deposit"), eurCents(now), "deposit");
+      var fromNote = B.selected.some(function (id) { var s = serviceById(id); return s && s.priceFrom; })
+        ? '<p class="fine">' + t("b.summary.fromNote") + '</p>' : '';
 
       // Acompte del 20 % (recomendado) o, como segunda opción, todo por adelantado
       var options = '<fieldset class="pay-options"><legend>' + t("b.summary.payHow") + '</legend>' +
@@ -522,12 +593,40 @@
         return '<div class="summary-row' + (cls ? " " + cls : "") + '"><span>' + a + '</span><span>' + b + '</span></div>';
       }
 
+      if (gift) options = '<p class="notice">' + t("b.summary.giftFull").replace("{name}", esc(f.gName)) + '</p>';
+
       return (B.error ? '<p class="notice warm" role="alert">' + esc(B.error) + '</p>' : '') +
-        '<div class="summary">' + rows + '</div>' + options +
+        '<div class="summary">' + rows + '</div>' + fromNote + options +
         '<label class="check"><input type="checkbox" id="accept-terms" data-action="accept"' + (B.accepted ? " checked" : "") + '>' +
         '<span>' + t("b.summary.terms") + '</span></label>' +
         (B.mode === "gift" ? '<p class="notice warm">' + t("b.summary.giftTerms") + '</p>' : '') +
-        '<p class="fine">' + t("b.summary.redirect") + '</p>';
+        '<p class="fine">' + t(gift ? "b.summary.redirectGift" : "b.summary.redirect") + '</p>';
+    },
+
+    redeem: function () {
+      var f = B.form;
+      var html = '<p class="step-intro">' + t("b.redeem.intro") + '</p>';
+      if (B.error) html += '<p class="notice warm" role="alert">' + esc(B.error) + '</p>';
+      if (B.redeem && B.redeem.state !== "open") html += '<p class="notice warm" role="alert">' + giftStateText(B.redeem) + '</p>';
+      html += '<div class="form-section">' +
+        '<div class="field"><label for="f-rName">' + t("b.redeem.name") + '</label>' +
+          '<input id="f-rName" type="text" data-field="rName" value="' + esc(f.rName || "") + '" autocomplete="given-name" maxlength="100" required></div>' +
+        '<div class="field"><label for="f-rCode">' + t("b.redeem.code") + '</label>' +
+          '<input id="f-rCode" type="text" data-field="rCode" value="' + esc(f.rCode || "") + '" placeholder="NYG-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20" required></div>' +
+        '</div>';
+      return html + helpLine();
+    },
+
+    redeemSummary: function () {
+      var g = B.redeem;
+      var rows = '<div class="summary-row"><span>' + t("b.summary.for") + '</span><span>' + esc(g.giftName) + '</span></div>' +
+        g.services.map(function (s) { return '<div class="summary-row"><span>' + esc(L(s.name)) + '</span><span>✓</span></div>'; }).join("") +
+        '<div class="summary-row"><span>' + t("b.summary.date") + '</span><span>' + esc(longDate(B.date)) + ' · ' + B.slot + '</span></div>' +
+        '<div class="summary-row"><span>' + t("b.redeem.offeredBy") + '</span><span>' + esc(g.clientName) + '</span></div>' +
+        '<div class="summary-row total"><span>' + t("b.redeem.paid") + '</span><span>✓</span></div>';
+      return (B.error ? '<p class="notice warm" role="alert">' + esc(B.error) + '</p>' : '') +
+        '<div class="summary">' + rows + '</div>' +
+        '<p class="fine">' + t("b.redeem.emailNote") + '</p>' + helpLine();
     },
 
     result: function () {
@@ -536,19 +635,19 @@
         return '<div class="done"><div class="done-mark">' + ICON.wait + '</div><p>' + t("b.result.checking") + '</p></div>';
       }
       var d = r.data;
+      if (B.flow === "redeem") return redeemDoneHtml(d);
 
       if (d.status === "confirmed" || d.status === "completed") {
         var html = '<div class="done">' +
           '<div class="done-mark">' + ICON.check + '</div>' +
-          '<p>' + t(d.paidFull ? "b.done.textFull" : "b.done.text") + '</p>' +
+          '<p>' + t(d.mode === "gift" ? "b.done.textGift" : d.paidFull ? "b.done.textFull" : "b.done.text") + '</p>' +
           resultSummary(d);
         if (d.mode === "gift" && d.giftCode) {
           html += '<div class="gift-card">' +
             '<span class="eyebrow">' + t("b.done.giftEyebrow") + '</span>' +
             '<span class="gift-code">' + esc(d.giftCode) + '</span>' +
             '<span>' + t("b.done.giftFor") + ' ' + esc(d.giftName) + '</span>' +
-            '<small>' + t("b.done.validOn") + ' ' + esc(longDate(d.date)) + ' · ' + esc(d.start) + '</small>' +
-            (d.restCents > 0 ? '<small class="gift-rest">' + t("b.done.giftRest").replace("{amount}", eurCents(d.restCents)) + '</small>' : '') +
+            (d.giftExpiresAt ? '<small>' + t("b.done.validUntil") + ' ' + esc(longDate(d.giftExpiresAt)) + '</small>' : '') +
             '<small>' + t("b.done.giftSent") + '</small>' +
             '</div>' +
             '<p class="fine">' + t("b.summary.giftTerms") + '</p>' +
@@ -564,7 +663,7 @@
             '<small>' + t("b.done.calendarHint") + '</small>' +
             '</div>';
         }
-        return html + '</div>';
+        return html + helpLine() + '</div>';
       }
 
       if (d.status === "pending_payment") {
@@ -587,13 +686,13 @@
 
   function resultSummary(d) {
     return '<div class="summary">' +
-      '<div class="summary-row"><span>' + t("b.summary.date") + '</span><span>' + esc(longDate(d.date)) + ' · ' + esc(d.start) + '</span></div>' +
+      (d.date ? '<div class="summary-row"><span>' + t("b.summary.date") + '</span><span>' + esc(longDate(d.date)) + ' · ' + esc(d.start) + '</span></div>' : '') +
       d.services.map(function (s) {
         return '<div class="summary-row"><span>' + esc(L(s.name)) + '</span><span>' + eurCents(s.priceCents) + '</span></div>';
       }).join("") +
       '<div class="summary-row total"><span>' + t("b.summary.total") + '</span><span>' + eurCents(d.totalCents) + '</span></div>' +
       '<div class="summary-row"><span>' + t(paidLabel(d)) + '</span><span>' + eurCents(d.depositCents) + '</span></div>' +
-      '<div class="summary-row"><span>' + t("b.summary.rest") + '</span><span>' + (d.restCents > 0 ? eurCents(d.restCents) : t("b.summary.nothingLeft")) + '</span></div>' +
+      (d.mode === "gift" ? '' : '<div class="summary-row"><span>' + t("b.summary.rest") + '</span><span>' + (d.restCents > 0 ? eurCents(d.restCents) : t("b.summary.nothingLeft")) + '</span></div>') +
       '</div>';
   }
 
@@ -610,9 +709,9 @@
     var lines = [
       t("b.share.hello").replace("{name}", d.giftName),
       t("b.share.offer").replace("{services}", names),
-      t("b.share.when").replace("{date}", longDate(d.date)).replace("{time}", d.start),
-      t("b.share.code").replace("{code}", d.giftCode),
-      d.restCents > 0 ? t("b.share.rest").replace("{amount}", eurCents(d.restCents)) : t("b.share.paid")
+      t("b.share.link").replace("{link}", d.giftLink || ""),
+      t("b.share.code").replace("{code}", d.giftCode) + (d.giftExpiresAt ? " " + t("b.share.until").replace("{date}", longDate(d.giftExpiresAt)) : ""),
+      t("b.share.paid")
     ];
     if (d.giftMessage) lines.push("« " + d.giftMessage + " »");
     if (d.clientName) lines.push("— " + d.clientName);
@@ -639,9 +738,10 @@
   }
 
   function updateFooter() {
-    var step = STEPS[B.step];
+    var step = steps()[B.step];
     btnBack.hidden = B.step === 0 || step === "result";
-    if (step === "summary") btnNext.textContent = B.submitting ? t("b.redirecting") : t(B.payFull ? "b.payFull" : "b.pay");
+    if (step === "summary") btnNext.textContent = B.submitting ? t("b.redirecting") : t(B.mode === "gift" ? "b.payGift" : B.payFull ? "b.payFull" : "b.pay");
+    else if (step === "redeemSummary") btnNext.textContent = B.submitting ? t("loading") : t("b.redeem.confirm");
     else if (step === "result") btnNext.textContent = t("b.finish");
     else btnNext.textContent = t("b.next");
     btnNext.disabled = !canNext();
@@ -654,17 +754,18 @@
   }
 
   function renderBooking(keepScroll) {
-    var step = STEPS[B.step];
+    var step = steps()[B.step];
     var scroll = sheetBody.scrollTop;
     var titleKey = step === "result" ? resultTitle() : "b." + step + ".title";
     sheetTitle.textContent = t(titleKey);
-    progressBar.style.width = Math.max(6, (B.step / (STEPS.length - 1)) * 100) + "%";
+    progressBar.style.width = Math.max(6, (B.step / (steps().length - 1)) * 100) + "%";
     sheetBody.innerHTML = render[step]();
     sheetBody.scrollTop = keepScroll ? scroll : 0;
     updateFooter();
   }
 
   function resultTitle() {
+    if (B.flow === "redeem") return "b.redeem.doneTitle";
     var d = B.result && B.result.data;
     if (!d) return "b.result.title";
     if (d.status === "confirmed" || d.status === "completed") return "b.done.title";
@@ -680,11 +781,11 @@
       lang: lang,
       mode: B.mode,
       services: B.selected.slice(),
-      date: B.date,
-      start: B.slot,
+      date: B.mode === "gift" ? null : B.date,
+      start: B.mode === "gift" ? null : B.slot,
       client: { name: f.name, email: f.email, phone: f.phone },
       acceptDeposit: B.accepted,
-      payFull: B.payFull
+      payFull: B.mode === "gift" || B.payFull
     };
     if (B.mode === "gift") body.gift = { name: f.gName, age: Number(f.gAge), email: f.gEmail, message: f.gMessage || "" };
 
@@ -702,7 +803,7 @@
         B.slot = null;
         B.monthData = {};
         B.dayData = null;
-        B.step = STEPS.indexOf("date");
+        B.step = steps().indexOf("date");
         B.error = errorText(err.code);
         loadDay(B.date);
       } else {
@@ -714,9 +815,11 @@
 
   function goNext() {
     if (!canNext()) return;
-    var step = STEPS[B.step];
+    var step = steps()[B.step];
     if (step === "result") { closeBooking(); return; }
     if (step === "summary") { submitBooking(); return; }
+    if (step === "redeem") { verifyGift(); return; }
+    if (step === "redeemSummary") { scheduleGift(); return; }
     B.error = null;
     B.step++;
     renderBooking();
@@ -724,6 +827,84 @@
 
   function goBack() {
     if (B.step > 0) { B.error = null; B.step--; renderBooking(); }
+  }
+
+  /* ----- Carte cadeau: el beneficiario elige su día ----- */
+
+  function openRedeem(code) {
+    lastFocus = document.activeElement;
+    B = newBooking({ flow: "redeem" });
+    B.form.rCode = code || "";
+    showSheet();
+    renderBooking();
+  }
+
+  function giftStateText(g) {
+    if (g.state === "scheduled") return t("b.redeem.scheduled").replace("{date}", esc(longDate(g.date))).replace("{time}", esc(g.start));
+    if (g.state === "expired") return t("b.redeem.expired").replace("{date}", esc(longDate(g.expiresAt)));
+    return t("b.redeem." + g.state);
+  }
+
+  function verifyGift() {
+    var f = B.form;
+    B.submitting = true;
+    B.error = null;
+    updateFooter();
+    var current = B;
+    api("POST", "/api/gift/verify", { code: f.rCode, name: f.rName }).then(function (g) {
+      if (current !== B) return;
+      B.submitting = false;
+      B.redeem = g;
+      if (g.state === "open") { B.step = steps().indexOf("date"); B.month = null; B.monthData = {}; }
+      renderBooking();
+    }, function (err) {
+      if (current !== B) return;
+      B.submitting = false;
+      B.error = errorText(err.code);
+      renderBooking(true);
+    });
+  }
+
+  function scheduleGift() {
+    var f = B.form;
+    B.submitting = true;
+    B.error = null;
+    updateFooter();
+    var current = B;
+    api("POST", "/api/gift/schedule", { code: f.rCode, name: f.rName, date: B.date, start: B.slot }).then(function (res) {
+      if (current !== B) return;
+      B.submitting = false;
+      B.redeemDone = res;
+      B.result = { data: res };
+      B.step = steps().indexOf("result");
+      renderBooking();
+    }, function (err) {
+      if (current !== B) return;
+      B.submitting = false;
+      B.error = errorText(err.code);
+      if (err.code === "slot_unavailable") {
+        B.slot = null; B.monthData = {}; B.dayData = null;
+        B.step = steps().indexOf("date");
+        loadDay(B.date);
+      }
+      renderBooking();
+    });
+  }
+
+  function redeemDoneHtml(d) {
+    var html = '<div class="done"><div class="done-mark">' + ICON.check + '</div>' +
+      '<p>' + t("b.redeem.doneText") + '</p>' +
+      '<div class="summary">' +
+        '<div class="summary-row"><span>' + t("b.summary.date") + '</span><span>' + esc(longDate(d.date)) + ' · ' + esc(d.start) + '</span></div>' +
+        d.services.map(function (s) { return '<div class="summary-row"><span>' + esc(L(s.name)) + '</span><span>✓</span></div>'; }).join("") +
+      '</div>';
+    if (d.calendar) {
+      html += '<div class="add-cal"><span class="eyebrow">' + t("b.done.calendar") + '</span><div class="add-cal-btns">' +
+        '<a class="btn btn-outline" href="' + esc(d.calendar.ics) + '">' + ICON.calendar + t("b.done.calendarApple") + '</a>' +
+        '<a class="btn btn-outline" href="' + esc(d.calendar.google) + '" target="_blank" rel="noopener">' + ICON.calendar + t("b.done.calendarGoogle") + '</a>' +
+        '</div><small>' + t("b.done.calendarHint") + '</small></div>';
+    }
+    return html + helpLine() + '</div>';
   }
 
   /* ----- Vuelta desde el pago ----- */
@@ -734,6 +915,7 @@
       if (current !== B) return;
       B.result.data = data;
       B.mode = data.mode;
+      B.step = steps().indexOf("result");   // la carte cadeau tiene un paso menos
       renderBooking(true);
       // El aviso de SumUp puede tardar unos segundos
       if (data.status === "pending_payment" && attempt < 10) {
@@ -750,7 +932,7 @@
   function openResult(id, token) {
     lastFocus = document.activeElement;
     B = newBooking({});
-    B.step = STEPS.indexOf("result");
+    B.step = steps().indexOf("result");
     B.result = { id: id, t: token, data: null };
     showSheet();
     renderBooking();
@@ -796,6 +978,8 @@
       B.slot = el.dataset.slot;
       B.error = null;
       renderBooking(true);
+    } else if (a === "open-redeem") {
+      openRedeem("");
     } else if (a === "retry") {
       retryPayment();
     } else if (a === "share-copy" || a === "share-native") {
@@ -878,6 +1062,12 @@
 
     if (a === "open-booking") {
       openBooking({ mode: el.dataset.mode, service: el.dataset.service });
+    } else if (a === "open-redeem") {
+      openRedeem("");
+    } else if (a === "scroll-to") {
+      showView("accueil");
+      var target = document.getElementById(el.dataset.target);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
     } else if (a === "story" || a === "filter") {
       filter = el.dataset.cat;
       renderChips();
@@ -912,6 +1102,8 @@
     var params = new URLSearchParams(location.search);
     var id = params.get("reservation");
     var token = params.get("t");
+    var giftCode = params.get("cadeau");
     if (id && token && CATALOG) openResult(id, token);
+    else if (giftCode !== null && CATALOG) openRedeem(giftCode);
   });
 })();

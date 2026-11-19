@@ -943,6 +943,11 @@ a.contact-value {
 
 a.contact-value:hover { text-decoration: underline; }
 
+/* Horaires (depuis les réglages du panel) */
+#contact-hours { display: flex; flex-direction: column; gap: 2px; }
+.hours-line span { display: inline-block; min-width: 9.5em; color: var(--ink); }
+.hours-closed { margin-top: 4px; opacity: .75; font-size: .92em; }
+
 /* Plan d'accès (OpenStreetMap, sans cookies de suivi) */
 .map { display: flex; flex-direction: column; gap: 10px; }
 .map-frame {
@@ -1727,3 +1732,67 @@ a.contact-value:hover { text-decoration: underline; }
 body.sheet-open { overflow: hidden; }
 
 .gift-card .gift-rest { color: var(--gold-soft); font-weight: 500; }
+
+/* ---------- Novedades: horario en la portada, perruques, À propos, carte cadeau ---------- */
+
+.hero-redeem { align-self: flex-start; margin-top: -4px; }
+.link-light { color: var(--gold-soft); }
+.link-light:hover { color: var(--cream); }
+
+.hours-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  background: var(--paper);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius);
+}
+.hours-card .hours-line span { min-width: 9.5em; }
+
+.perruques-text { margin: 0 0 14px; max-width: 60ch; }
+.wig-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.wig-gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--cream-2);
+}
+.wig-cta { text-decoration: none; }
+.service-quote .btn { text-decoration: none; }
+
+.about-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.45rem;
+  color: var(--bordeaux);
+  margin: 18px 0 4px;
+}
+.about-title:first-child { margin-top: 0; }
+
+.redeem-link { text-align: center; margin-top: 14px; }
+.help-wa { margin-top: 6px; text-align: center; }
+.help-wa a { color: var(--sage-deep); font-weight: 500; }
+
+.place-photo { margin: 0 0 12px; }
+.place-photo img { display: block; width: 100%; height: auto; border-radius: var(--radius-sm); border: 1px solid var(--sand); }
+.place-photo figcaption { margin-top: 6px; font-size: .85rem; opacity: .75; }
+
+@media (min-width: 900px) {
+  .wig-gallery { grid-template-columns: repeat(6, 1fr); }
+}
+
+/* Horario: día arriba y franjas debajo en móvil; en columnas en pantallas anchas */
+.hours-line { display: flex; flex-direction: column; padding: 4px 0; }
+.hours-line span, .hours-card .hours-line span { min-width: 0; font-weight: 500; color: var(--bordeaux); }
+@media (min-width: 600px) {
+  .hours-line { display: grid; grid-template-columns: 10em 1fr; gap: 12px; }
+}

@@ -20,7 +20,8 @@
     cancelled: "Annulé",
     no_show: "Absente",
     payment_failed: "Paiement refusé",
-    expired: "Expiré"
+    expired: "Expiré",
+    refunded: "Remboursé"
   };
 
   var DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -34,6 +35,8 @@
     not_found: "Introuvable.",
     invalid_hours: "Horaires invalides : l'heure de fin doit être après l'heure de début, sans chevauchement.",
     invalid_time: "Heures invalides.",
+    invalid_order: "Ordre invalide.",
+    invalid_amount: "Montant invalide (au maximum le montant payé en ligne).",
     mail_failed: "L'envoi des e-mails a échoué.",
     network: "Connexion impossible."
   };
@@ -119,6 +122,8 @@
       if (name === "agenda") loadAgenda();
       if (name === "calendrier") loadCalendar();
       if (name === "reglages" && !loaded.settings) loadSettings();
+      if (name === "soins") loadServices();
+      if (name === "cadeaux") loadPendingGifts();
     });
   });
 
@@ -157,6 +162,7 @@
     if (f === "today") q = "?from=" + today + "&to=" + today;
     if (f === "active") q = "?from=" + today + "&to=" + addDays(today, 120) + "&status=active";
     if (f === "cancelled") q = "?from=" + addDays(today, -60) + "&to=" + addDays(today, 120) + "&status=cancelled";
+    if (f === "refunded") q = "?from=" + addDays(today, -90) + "&to=" + addDays(today, 365) + "&status=refunded";
     if (f === "past") q = "?from=" + addDays(today, -30) + "&to=" + addDays(today, -1);
     $("agenda-list").innerHTML = '<p class="hint">Chargement…</p>';
     api("GET", "/bookings" + q).then(function (list) {
@@ -190,6 +196,7 @@
     $("drawer").hidden = true;
     $("backdrop").hidden = true;
     current = null;
+    svcEditing = null;
   }
 
   $("drawer-close").addEventListener("click", closeDrawer);
@@ -205,7 +212,8 @@
     var b = current;
     var rows = [
       ["Statut", pills(b)],
-      ["Date", esc(longDate(b.date)) + " · " + esc(b.start) + "–" + esc(b.end)],
+      ["Date", b.date ? esc(longDate(b.date)) + " · " + esc(b.start) + "–" + esc(b.end)
+        : "<b>À planifier</b> par le bénéficiaire" + (b.gift_expires_at ? " · valable jusqu'au " + esc(longDate(b.gift_expires_at)) : "")],
       ["Soins", b.services.map(function (s) { return esc(s.name.fr) + ' <span class="money">' + eur(s.priceCents) + "</span>"; }).join("<br>")],
       ["Total", '<span class="money">' + eur(b.total_cents) + "</span>"],
       [b.pay_full ? "Payé en ligne (totalité)" : "Acompte", '<span class="money">' + eur(b.deposit_cents) + "</span>" + (b.paid_at ? " · payé le " + esc(dateTime(b.paid_at)) : " · non payé")],
@@ -216,7 +224,9 @@
       rows.push(["Bénéficiaire", esc(b.gift_name) + ", " + esc(b.gift_age) + " ans<br>" + esc(b.gift_email)]);
       if (b.gift_message) rows.push(["Message", esc(b.gift_message)]);
       rows.push(["Code", b.gift_code ? "<b>" + esc(b.gift_code) + "</b>" + (b.gift_redeemed_at ? " · utilisé le " + esc(dateTime(b.gift_redeemed_at)) : " · non utilisé") : "—"]);
+      if (b.gift_link) rows.push(["Lien du bénéficiaire", '<input class="copy-field" readonly value="' + esc(b.gift_link) + '"> <button class="btn btn-ghost btn-sm" data-copy="' + esc(b.gift_link) + '">Copier</button>']);
     }
+    if (b.status === "refunded") rows.push(["Remboursé", '<span class="money">' + eur(b.refunded_cents || 0) + "</span> le " + esc(dateTime(b.refunded_at))]);
     rows.push(["E-mails", b.emails_sent_at ? "envoyés le " + esc(dateTime(b.emails_sent_at)) : "non envoyés"]);
     rows.push(["Langue", b.lang === "en" ? "Anglais" : "Français"]);
     rows.push(["Réf.", esc(b.id)]);
@@ -230,9 +240,23 @@
     if (["completed", "no_show", "cancelled"].indexOf(b.status) !== -1 && b.paid_at) actions.push('<button class="btn btn-outline btn-sm" data-act="reopen">Remettre en confirmé</button>');
     if (["confirmed", "completed"].indexOf(b.status) !== -1) actions.push('<button class="btn btn-outline btn-sm" data-act="resend">Renvoyer les e-mails</button>');
     if (b.needs_attention) actions.push('<button class="btn btn-outline btn-sm" data-act="resolve">Marquer comme vérifié</button>');
+    if (b.mode === "gift" && b.status === "confirmed" && b.date) actions.push('<button class="btn btn-outline btn-sm" data-act="unschedule">Libérer la date (le bénéficiaire en choisit une autre)</button>');
+
+    // Remboursement accordé sur WhatsApp (jusqu'à 48 h avant). L'argent se rend depuis SumUp.
+    var refund = "";
+    if (["confirmed", "cancelled", "no_show"].indexOf(b.status) !== -1 && b.paid_at) {
+      var hoursLeft = b.date ? (parse(b.date).getTime() + Number(b.start.slice(0, 2)) * 3600000 + Number(b.start.slice(3)) * 60000 - Date.now()) / 3600000 : null;
+      refund = '<div class="block-form refund"><b>Rembourser</b>' +
+        '<p class="hint">À utiliser après accord avec la cliente sur WhatsApp. Le remboursement se fait dans votre espace SumUp ' +
+        '(<a href="https://me.sumup.com/" target="_blank" rel="noopener">me.sumup.com</a>) ; ici, il est enregistré et le créneau est libéré.</p>' +
+        (hoursLeft !== null && hoursLeft < 48 ? '<p class="notice warn">Attention : le rendez-vous est dans moins de 48 h (règle : remboursement jusqu\'à 48 h avant).</p>' : "") +
+        '<div class="row"><label>Montant remboursé (€)<input id="refund-amount" inputmode="decimal" value="' + (b.deposit_cents / 100).toFixed(2).replace(".", ",") + '"></label>' +
+        '<label>Motif (facultatif)<input id="refund-note" maxlength="300" placeholder="Annulation demandée sur WhatsApp"></label></div>' +
+        '<button class="btn btn-danger btn-sm" data-act="refund">Enregistrer le remboursement</button></div>';
+    }
 
     var cancel = ["confirmed", "pending_payment"].indexOf(b.status) !== -1
-      ? '<div class="block-form"><b>Annuler ce rendez-vous</b><p class="hint">L\'acompte n\'est pas remboursé.</p>' +
+      ? '<div class="block-form"><b>Annuler ce rendez-vous</b><p class="hint">Sans remboursement. Pour rembourser (jusqu\'à 48 h avant, accordé sur WhatsApp), utilisez « Rembourser ».</p>' +
         '<label class="radio"><input type="checkbox" id="cancel-notify" checked> Prévenir la cliente par e-mail</label>' +
         '<button class="btn btn-danger btn-sm" data-act="cancel">Annuler le rendez-vous</button></div>'
       : "";
@@ -244,9 +268,16 @@
       '<div class="actions">' + actions.join("") + "</div>" +
       '<label>Note interne<textarea id="note" maxlength="1000">' + esc(b.admin_note || "") + '</textarea></label>' +
       '<div><button class="btn btn-outline btn-sm" data-act="note">Enregistrer la note</button></div>' +
-      cancel +
+      cancel + refund +
       '<p class="status" id="drawer-msg" role="status"></p>';
   }
+
+  document.addEventListener("click", function (e) {
+    var c = e.target.closest("[data-copy]");
+    if (!c) return;
+    var done = function () { c.textContent = "Copié ✓"; };
+    if (navigator.clipboard) navigator.clipboard.writeText(c.dataset.copy).then(done, function () {});
+  });
 
   $("drawer-body").addEventListener("click", function (e) {
     var btn = e.target.closest("[data-act]");
@@ -255,11 +286,13 @@
     var body = { action: act };
     if (act === "note") body.note = $("note").value;
     if (act === "cancel") body.notify = $("cancel-notify").checked;
+    if (act === "refund") { body.amount = $("refund-amount").value; body.note = $("refund-note").value; }
     btn.disabled = true;
     api("POST", "/bookings/" + encodeURIComponent(current.id) + "/action", body).then(function (b) {
       current = b;
       renderDrawer();
-      alertMsg(act === "resend" ? "E-mails renvoyés." : act === "note" ? "Note enregistrée." : "Mis à jour.");
+      alertMsg(act === "resend" ? "E-mails renvoyés." : act === "note" ? "Note enregistrée." : act === "refund" ? "Remboursement enregistré. Pensez à le faire dans SumUp." : "Mis à jour.");
+      if (!$("tab-cadeaux").hidden) loadPendingGifts();
       loadAgenda();
       if (!$("tab-calendrier").hidden) loadCalendar();
     }, function (err) {
@@ -379,6 +412,20 @@
 
   var giftInfo = null;
 
+  function loadPendingGifts() {
+    api("GET", "/gifts/pending").then(function (list) {
+      $("gift-pending").innerHTML = list.length
+        ? list.map(function (b) {
+            return '<button class="item" data-booking="' + esc(b.id) + '">' +
+              '<span class="item-time">' + esc(b.gift_code) + '</span>' +
+              '<span class="item-main"><b>' + esc(b.gift_name) + ' (offert par ' + esc(b.client_name) + ')</b>' +
+              '<small>' + esc(b.services.map(function (s) { return s.name.fr; }).join(" + ")) + ' · valable jusqu\'au ' + esc(longDate(b.gift_expires_at)) + '</small></span>' +
+              '<span class="pills"><span class="pill pending_payment">À planifier</span></span></button>';
+          }).join("")
+        : '<p class="hint">Aucune carte cadeau en attente.</p>';
+    }, function (err) { $("gift-pending").innerHTML = '<p class="error">' + esc(errText(err)) + "</p>"; });
+  }
+
   $("gift-form").addEventListener("submit", function (e) {
     e.preventDefault();
     lookupGift($("gift-code").value);
@@ -399,19 +446,21 @@
     var state;
     if (i.redeemed) state = '<p class="notice warn">Déjà utilisée le ' + esc(dateTime(b.gift_redeemed_at)) + ".</p>";
     else if (["confirmed", "no_show"].indexOf(b.status) === -1) state = '<p class="notice warn">Non valable : ' + esc(STATUS[b.status]) + ".</p>";
+    else if (!i.scheduled) state = '<p class="notice warn">' + (i.expired ? "Expirée le " : "Pas encore de rendez-vous : le bénéficiaire choisit sa date avec son lien. Valable jusqu'au ") + esc(longDate(b.gift_expires_at)) + ".</p>";
     else if (i.validToday) state = '<p class="notice">Valable aujourd\'hui.</p>';
     else if (i.expired) state = '<p class="notice warn">La date de validité est passée (' + esc(longDate(b.date)) + ").</p>";
     else state = '<p class="notice warn">Valable uniquement le ' + esc(longDate(b.date)) + ".</p>";
 
-    var canRedeem = !i.redeemed && ["confirmed", "no_show"].indexOf(b.status) !== -1;
+    var canRedeem = !i.redeemed && i.scheduled && ["confirmed", "no_show"].indexOf(b.status) !== -1;
     $("gift-result").innerHTML = '<div class="gift-box">' +
       '<span class="gift-code">' + esc(b.gift_code) + "</span>" + state +
       '<dl class="dl">' +
         "<dt>Bénéficiaire</dt><dd>" + esc(b.gift_name) + ", " + esc(b.gift_age) + " ans</dd>" +
         "<dt>Offert par</dt><dd>" + esc(b.client_name) + " · " + esc(b.client_phone) + "</dd>" +
-        "<dt>Rendez-vous</dt><dd>" + esc(longDate(b.date)) + " · " + esc(b.start) + "</dd>" +
+        "<dt>Rendez-vous</dt><dd>" + (b.date ? esc(longDate(b.date)) + " · " + esc(b.start) : "À planifier") + "</dd>" +
         "<dt>Soins</dt><dd>" + esc(b.services.map(function (s) { return s.name.fr; }).join(" + ")) + "</dd>" +
         "<dt>Reste à régler</dt><dd class=\"money\">" + eur(b.total_cents - b.deposit_cents) + "</dd>" +
+        (b.gift_link ? '<dt>Lien du bénéficiaire</dt><dd><button class="btn btn-ghost btn-sm" data-copy="' + esc(b.gift_link) + '">Copier le lien</button></dd>' : "") +
       "</dl>" +
       '<div class="actions">' +
         (canRedeem ? '<button class="btn btn-dark" data-redeem="' + (i.validToday ? "0" : "1") + '">' + (i.validToday ? "Valider le code" : "Valider quand même") + "</button>" : "") +
@@ -429,10 +478,180 @@
             function (err) { btn.disabled = false; renderGift(errText(err)); });
   });
 
+  /* ---------- Soins ---------- */
+
+  var svc = null;          // { categories, services }
+  var svcEditing = null;   // soin en cours d'édition (null = nouveau)
+
+  var SVC_FIELDS = {
+    cat: "Catégorie", name_fr: "Nom", price: "Prix", duration: "Durée affichée",
+    slot_minutes: "Temps bloqué dans l'agenda"
+  };
+
+  function money(v) {
+    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: v % 1 ? 2 : 0 }).format(v);
+  }
+
+  function loadServices() {
+    $("svc-list").innerHTML = '<p class="hint">Chargement…</p>';
+    api("GET", "/services").then(function (data) {
+      svc = data;
+      renderServices();
+    }, function (err) { $("svc-list").innerHTML = '<p class="error">' + esc(errText(err)) + "</p>"; });
+  }
+
+  function renderServices() {
+    $("svc-list").innerHTML = svc.categories.map(function (c) {
+      var list = svc.services.filter(function (s) { return s.cat === c.id; });
+      return '<div class="svc-group"><h2>' + esc(c.name.fr) + '</h2>' +
+        (list.length ? list.map(function (s, i) {
+          var meta = [(s.price_from ? "dès " : "") + money(s.price)];
+          if (s.duration) meta.push(s.duration + " min");
+          meta.push("agenda : " + s.slot_minutes + " min");
+          return '<div class="svc-row' + (s.active ? "" : " off") + '">' +
+            '<div class="svc-move">' +
+              '<button class="btn btn-ghost btn-sm" data-svc-move="-1" data-id="' + esc(s.id) + '" aria-label="Monter"' + (i === 0 ? " disabled" : "") + '>↑</button>' +
+              '<button class="btn btn-ghost btn-sm" data-svc-move="1" data-id="' + esc(s.id) + '" aria-label="Descendre"' + (i === list.length - 1 ? " disabled" : "") + '>↓</button>' +
+            '</div>' +
+            '<div class="svc-main"><b>' + esc(s.name_fr) + '</b>' + (s.sub_fr ? ' <small>· ' + esc(s.sub_fr) + '</small>' : '') +
+              '<small class="svc-meta">' + esc(meta.join(" · ")) + (s.active ? "" : ' · <span class="pill cancelled">Masqué</span>') + '</small></div>' +
+            '<button class="btn btn-outline btn-sm" data-svc-edit="' + esc(s.id) + '">Modifier</button>' +
+          '</div>';
+        }).join("") : '<p class="hint">Aucun soin dans cette catégorie.</p>') +
+      '</div>';
+    }).join("");
+  }
+
+  function svcField(name, label, value, attrs, hint) {
+    return '<label>' + label + (hint ? ' <small class="hint">' + hint + '</small>' : '') +
+      '<input name="' + name + '" value="' + esc(value == null ? "" : value) + '" ' + (attrs || "") + '></label>';
+  }
+
+  function svcArea(name, label, value, hint) {
+    return '<label>' + label + (hint ? ' <small class="hint">' + hint + '</small>' : '') +
+      '<textarea name="' + name + '" maxlength="1500">' + esc(value || "") + '</textarea></label>';
+  }
+
+  function openService(s) {
+    svcEditing = s;
+    current = null;
+    var v = s || { cat: svc.categories[0].id, active: true, price: "", duration: "", slot_minutes: "" };
+    $("drawer-title").textContent = s ? "Modifier le soin" : "Nouveau soin";
+    $("drawer-body").innerHTML = '<form id="svc-form" class="svc-form" novalidate>' +
+      '<label>Catégorie<select name="cat">' + svc.categories.map(function (c) {
+        return '<option value="' + c.id + '"' + (c.id === v.cat ? " selected" : "") + '>' + esc(c.name.fr) + '</option>';
+      }).join("") + '</select></label>' +
+      svcField("name_fr", "Nom (français)", v.name_fr, 'maxlength="80" required') +
+      svcField("sub_fr", "Sous-titre", v.sub_fr, 'maxlength="80"', "facultatif, ex. « Méthode Shiatsu »") +
+      svcArea("desc_fr", "Description", v.desc_fr) +
+      '<div class="row">' +
+        svcField("price", "Prix (€)", v.price, 'inputmode="decimal" required') +
+        '<label class="radio"><input type="checkbox" name="price_from"' + (v.price_from ? " checked" : "") + '> « à partir de »</label>' +
+        svcField("duration", "Durée affichée (min)", v.duration, 'inputmode="numeric"', "vide = non affichée") +
+        svcField("slot_minutes", "Temps bloqué (min)", v.slot_minutes, 'inputmode="numeric"', "dans l'agenda") +
+      '</div>' +
+      '<details class="svc-en"' + (v.name_en ? " open" : "") + '><summary>Version anglaise (facultatif)</summary>' +
+        '<p class="hint">Si vide, le site en anglais affiche le texte français.</p>' +
+        svcField("name_en", "Name", v.name_en, 'maxlength="80"') +
+        svcField("sub_en", "Subtitle", v.sub_en, 'maxlength="80"') +
+        svcArea("desc_en", "Description", v.desc_en) +
+      '</details>' +
+      '<label class="radio"><input type="checkbox" name="active"' + (v.active ? " checked" : "") + '> Visible sur le site</label>' +
+      '<div class="actions"><button class="btn btn-dark" type="submit">Enregistrer</button>' +
+        (s ? '<button class="btn btn-danger btn-sm" type="button" data-svc-delete="' + esc(s.id) + '">Supprimer</button>' : '') +
+      '</div>' +
+      '<p class="hint">Les rendez-vous déjà réservés ne changent pas : ils gardent le nom et le prix du jour de la réservation.</p>' +
+      '<p class="status" id="svc-msg" role="status"></p></form>';
+    $("drawer").hidden = false;
+    $("backdrop").hidden = false;
+    var first = $("drawer-body").querySelector('input[name="name_fr"]');
+    if (first) first.focus();
+  }
+
+  $("svc-add").addEventListener("click", function () { openService(null); });
+
+  $("svc-list").addEventListener("click", function (e) {
+    var edit = e.target.closest("[data-svc-edit]");
+    if (edit) {
+      var s = svc.services.filter(function (x) { return x.id === edit.dataset.svcEdit; })[0];
+      if (s) openService(s);
+      return;
+    }
+    var move = e.target.closest("[data-svc-move]");
+    if (move) {
+      var id = move.dataset.id;
+      var s2 = svc.services.filter(function (x) { return x.id === id; })[0];
+      var same = svc.services.filter(function (x) { return x.cat === s2.cat; });
+      var i = same.indexOf(s2), j = i + Number(move.dataset.svcMove);
+      if (j < 0 || j >= same.length) return;
+      same[i] = same[j]; same[j] = s2;
+      // Orden completo: categorías en su orden, con la categoría tocada reordenada
+      var ids = [];
+      svc.categories.forEach(function (c) {
+        (c.id === s2.cat ? same : svc.services.filter(function (x) { return x.cat === c.id; }))
+          .forEach(function (x) { ids.push(x.id); });
+      });
+      move.disabled = true;
+      api("POST", "/services/order", { ids: ids }).then(function (data) { svc = data; renderServices(); },
+        function (err) { alert(errText(err)); loadServices(); });
+    }
+  });
+
+  $("drawer-body").addEventListener("submit", function (e) {
+    if (e.target.id !== "svc-form") return;
+    e.preventDefault();
+    var f = e.target;
+    var body = {};
+    ["cat", "name_fr", "sub_fr", "desc_fr", "price", "duration", "slot_minutes", "name_en", "sub_en", "desc_en"].forEach(function (n) {
+      body[n] = f.elements[n].value;
+    });
+    body.active = f.elements.active.checked;
+    body.price_from = f.elements.price_from.checked;
+    f.querySelectorAll(".invalid").forEach(function (el) { el.classList.remove("invalid"); });
+    $("svc-msg").textContent = "";
+    var req = svcEditing ? api("PUT", "/services/" + encodeURIComponent(svcEditing.id), body) : api("POST", "/services", body);
+    req.then(function (saved) {
+      svcEditing = saved;
+      $("drawer-title").textContent = "Modifier le soin";
+      $("svc-msg").textContent = "Enregistré. Le site est à jour.";
+      loadServices();
+    }, function (err) {
+      if (err.code === "invalid_fields") {
+        (err.data.fields || []).forEach(function (n) { if (f.elements[n]) f.elements[n].classList.add("invalid"); });
+        $("svc-msg").textContent = "À corriger : " + (err.data.fields || []).map(function (n) { return SVC_FIELDS[n] || n; }).join(", ") + ".";
+      } else {
+        $("svc-msg").textContent = errText(err);
+      }
+    });
+  });
+
+  $("drawer-body").addEventListener("click", function (e) {
+    var del = e.target.closest("[data-svc-delete]");
+    if (!del) return;
+    // Doble clic de confirmación (sin ventana emergente)
+    if (!del.dataset.confirm) {
+      del.dataset.confirm = "1";
+      del.textContent = "Confirmer la suppression";
+      $("svc-msg").textContent = "Supprimé définitivement du site. Pour le retirer seulement un temps, décochez « Visible sur le site ».";
+      return;
+    }
+    api("DELETE", "/services/" + encodeURIComponent(del.dataset.svcDelete)).then(function () {
+      closeDrawer();
+      loadServices();
+    }, function (err) { $("svc-msg").textContent = errText(err); });
+  });
+
   /* ---------- Réglages ---------- */
 
   function rangeHtml(r) {
-    return '<span class="range"><input type="time" value="' + esc(r[0]) + '" aria-label="Début"> – <input type="time" value="' + esc(r[1]) + '" aria-label="Fin"></span>';
+    return '<span class="range"><input type="time" value="' + esc(r[0]) + '" aria-label="Début"> – <input type="time" value="' + esc(r[1]) + '" aria-label="Fin">' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-range-del aria-label="Supprimer cette plage">✕</button></span>';
+  }
+
+  function updateRangeButtons(row) {
+    var n = row.querySelectorAll(".range").length;
+    row.querySelector("[data-range-add]").hidden = n >= 3;
+    row.querySelectorAll("[data-range-del]").forEach(function (b) { b.hidden = n <= 1; });
   }
 
   function loadSettings() {
@@ -442,15 +661,14 @@
       $("hours").innerHTML = order.map(function (d) {
         var list = s.openingHours[d] || [];
         var ranges = list.length ? list : [["09:30", "18:30"]];
-        var second = ranges[1] || ["14:00", "18:30"];
         return '<div class="hours-row' + (list.length ? "" : " off") + '" data-dow="' + d + '">' +
           "<b>" + DAYS[d] + "</b>" +
           '<label class="radio"><input type="checkbox" class="open"' + (list.length ? " checked" : "") + "> Ouvert</label>" +
-          '<div class="ranges">' + rangeHtml(ranges[0]) +
-            '<label class="radio"><input type="checkbox" class="split"' + (ranges[1] ? " checked" : "") + "> Pause midi</label>" +
-            '<span class="second"' + (ranges[1] ? "" : " hidden") + ">" + rangeHtml(second) + "</span>" +
+          '<div class="ranges">' + ranges.map(rangeHtml).join("") +
+            '<button type="button" class="btn btn-outline btn-sm" data-range-add>+ Plage</button>' +
           "</div></div>";
       }).join("");
+      document.querySelectorAll(".hours-row").forEach(updateRangeButtons);
       $("slot-step").value = String(s.slotStep);
       $("buffer").value = s.bufferMinutes;
     });
@@ -459,7 +677,21 @@
   $("hours").addEventListener("change", function (e) {
     var row = e.target.closest(".hours-row");
     if (e.target.classList.contains("open")) row.classList.toggle("off", !e.target.checked);
-    if (e.target.classList.contains("split")) row.querySelector(".second").hidden = !e.target.checked;
+  });
+
+  // Hasta 3 franjas por día (ej. 9h30–12h · 13h30–16h · 16h30–19h30)
+  $("hours").addEventListener("click", function (e) {
+    var row = e.target.closest(".hours-row");
+    if (!row) return;
+    if (e.target.closest("[data-range-add]")) {
+      var last = row.querySelectorAll(".range");
+      var lastEnd = last.length ? last[last.length - 1].querySelectorAll("input")[1].value : "14:00";
+      e.target.closest("[data-range-add]").insertAdjacentHTML("beforebegin", rangeHtml([lastEnd, lastEnd < "18:00" ? "19:00" : lastEnd]));
+      updateRangeButtons(row);
+    } else if (e.target.closest("[data-range-del]")) {
+      e.target.closest(".range").remove();
+      updateRangeButtons(row);
+    }
   });
 
   $("settings-form").addEventListener("submit", function (e) {
@@ -468,13 +700,10 @@
     document.querySelectorAll(".hours-row").forEach(function (row) {
       var d = row.dataset.dow;
       if (!row.querySelector(".open").checked) { hours[d] = []; return; }
-      var times = row.querySelectorAll('.ranges > .range input[type="time"]');
-      var list = [[times[0].value, times[1].value]];
-      if (row.querySelector(".split").checked) {
-        var t2 = row.querySelectorAll('.second input[type="time"]');
-        list.push([t2[0].value, t2[1].value]);
-      }
-      hours[d] = list;
+      hours[d] = Array.prototype.map.call(row.querySelectorAll(".range"), function (r) {
+        var ti = r.querySelectorAll('input[type="time"]');
+        return [ti[0].value, ti[1].value];
+      });
     });
     $("settings-status").textContent = "";
     api("PUT", "/settings", {

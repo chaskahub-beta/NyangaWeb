@@ -19,7 +19,14 @@
     holdMinutes: 30,
     address: "Nyanga Beauty & Spa, 2 impasse des Charmilles, 25300 Granges-Narboz, France",
     settings: {
-      openingHours: { 0: [], 1: [["09:30", "18:30"]], 2: [["09:30", "18:30"]], 3: [["09:30", "18:30"]], 4: [["09:30", "18:30"]], 5: [["09:30", "18:30"]], 6: [] },
+      openingHours: {
+        0: [], 1: [],
+        2: [["09:30", "12:00"], ["13:30", "16:00"], ["16:30", "19:30"]],
+        3: [["09:00", "12:00"], ["13:30", "19:00"]],
+        4: [["09:30", "12:00"], ["13:30", "16:00"], ["16:30", "19:30"]],
+        5: [["09:00", "12:00"], ["13:30", "19:00"]],
+        6: [["09:00", "12:00"], ["13:30", "19:00"]]
+      },
       slotStep: 30,
       bufferMinutes: 15
     }
@@ -89,8 +96,10 @@
     if (mode !== "me" && mode !== "gift") throw err(400, "invalid_mode");
     var sel;
     try { sel = catalog.priceSelection(input.services); } catch (e) { throw err(400, e.message); }
-    if (!cal.isDate(input.date)) throw err(400, "invalid_date");
-    if (!cal.isTime(input.start)) throw err(400, "invalid_time");
+    if (mode === "me") {
+      if (!cal.isDate(input.date)) throw err(400, "invalid_date");
+      if (!cal.isTime(input.start)) throw err(400, "invalid_time");
+    }
     var c = input.client || {};
     var client = { name: clean(c.name, 100), email: clean(c.email, 254).toLowerCase(), phone: clean(c.phone, 30) };
     var fields = [];
@@ -108,7 +117,11 @@
     }
     if (input.acceptDeposit !== true) fields.push("acceptDeposit");
     if (fields.length) throw err(400, "invalid_fields", { fields: fields });
-    return { lang: input.lang === "en" ? "en" : "fr", mode: mode, sel: sel, date: input.date, start: input.start, client: client, gift: gift, payFull: input.payFull === true };
+    return {
+      lang: input.lang === "en" ? "en" : "fr", mode: mode, sel: sel,
+      date: mode === "me" ? input.date : null, start: mode === "me" ? input.start : null,
+      client: client, gift: gift, payFull: mode === "gift" || input.payFull === true
+    };
   }
 
   function paymentUrl(b) {
@@ -139,11 +152,37 @@
       giftName: b.mode === "gift" ? b.gift_name : undefined,
       giftCode: ok ? (b.gift_code || undefined) : undefined,
       holdExpiresAt: b.status === "pending_payment" ? b.hold_expires_at : undefined,
-      calendar: b.status === "confirmed" ? calendarLinks(b) : undefined,
+      calendar: b.status === "confirmed" && b.date ? calendarLinks(b) : undefined,
+      giftExpiresAt: ok && b.gift_code ? b.gift_expires_at : undefined,
+      giftLink: ok && b.gift_code ? giftLink(b) : undefined,
       paidFull: !!b.pay_full,
       clientName: b.mode === "gift" ? b.client_name : undefined,
       giftMessage: b.mode === "gift" ? (b.gift_message || undefined) : undefined
     };
+  }
+
+  function giftLink(b) {
+    return location.origin + location.pathname.replace(/[^/]*$/, "") + "?cadeau=" + encodeURIComponent(b.gift_code);
+  }
+
+  function plain(s) {
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  }
+
+  function giftFor(code, name) {
+    var norm = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^NYG/, "");
+    var full = "NYG-" + norm.slice(0, 4) + "-" + norm.slice(4);
+    var b = Object.keys(memory).map(function (k) { return memory[k]; }).filter(function (x) { return x.gift_code === full; })[0];
+    var given = plain(name), whole = b ? plain(b.gift_name) : "";
+    if (!b || !given || (given !== whole && given !== whole.split(" ")[0])) throw err(404, "gift_not_found");
+    return b;
+  }
+
+  function giftState(b) {
+    if (b.status !== "confirmed") return b.status === "cancelled" ? "cancelled" : "not_paid";
+    if (b.date) return "scheduled";
+    if (b.gift_expires_at < today()) return "expired";
+    return "open";
   }
 
   /* ---------- Rutas ---------- */
@@ -156,9 +195,10 @@
       return {
         depositRate: CONFIG.depositRate,
         categories: catalog.categories,
-        services: catalog.services.map(function (s) {
-          return { id: s.id, cat: s.cat, price: s.price, duration: s.duration, slotMinutes: s.slotMinutes, name: s.name, sub: s.sub, desc: s.desc };
-        })
+        services: catalog.services.filter(function (s) { return s.active !== false; }).map(function (s) {
+          return { id: s.id, cat: s.cat, price: s.price, priceFrom: !!s.priceFrom, duration: s.duration, slotMinutes: s.slotMinutes, name: s.name, sub: s.sub, desc: s.desc };
+        }),
+        hours: CONFIG.settings.openingHours
       };
     }
 
@@ -185,14 +225,16 @@
 
     if (method === "POST" && path === "bookings") {
       var v = validate(body || {});
-      var avail = day(v.date, v.sel.minutes);
-      if (avail.slots.indexOf(v.start) === -1) throw err(409, "slot_unavailable");
+      if (v.mode === "me") {
+        var avail = day(v.date, v.sel.minutes);
+        if (avail.slots.indexOf(v.start) === -1) throw err(409, "slot_unavailable");
+      }
       var total = v.sel.totalCents;
       var b = {
         id: randomId(9), token: randomId(18), status: "pending_payment", created_at: nowIso(),
         hold_expires_at: new Date(Date.now() + CONFIG.holdMinutes * 60000).toISOString(),
         lang: v.lang, mode: v.mode, date: v.date, start: v.start,
-        end: cal.toTime(cal.toMin(v.start) + v.sel.minutes), minutes: v.sel.minutes,
+        end: v.start ? cal.toTime(cal.toMin(v.start) + v.sel.minutes) : null, minutes: v.sel.minutes,
         services_json: JSON.stringify(v.sel.items.map(function (s) {
           return { id: s.id, name: s.name, priceCents: Math.round(s.price * 100), minutes: s.slotMinutes };
         })),
@@ -213,7 +255,7 @@
       var bk = find(m[1], (body && body.t) || "");
       if (bk.status === "confirmed" || bk.status === "completed") throw err(409, "not_payable");
       if (bk.status !== "pending_payment") {
-        var again = day(bk.date, bk.minutes, bk.id);
+        var again = bk.date ? day(bk.date, bk.minutes, bk.id) : { slots: [bk.start] };
         if (again.slots.indexOf(bk.start) === -1) throw err(409, "slot_unavailable");
         bk.status = "pending_payment";
         bk.hold_expires_at = new Date(Date.now() + CONFIG.holdMinutes * 60000).toISOString();
@@ -227,12 +269,36 @@
       return { depositCents: pb.deposit_cents, status: pb.status, date: pb.date, start: pb.start };
     }
 
+    if (method === "POST" && path === "gift/verify") {
+      var g = giftFor(body && body.code, body && body.name);
+      return {
+        state: giftState(g), giftName: g.gift_name, clientName: g.client_name, lang: g.lang,
+        services: JSON.parse(g.services_json).map(function (s) { return { id: s.id, name: s.name }; }),
+        minutes: g.minutes, totalCents: g.total_cents, expiresAt: g.gift_expires_at, date: g.date, start: g.start
+      };
+    }
+
+    if (method === "POST" && path === "gift/schedule") {
+      var gs = giftFor(body && body.code, body && body.name);
+      if (giftState(gs) !== "open") throw err(409, "gift_" + giftState(gs));
+      if (body.date > gs.gift_expires_at) throw err(409, "gift_date_after_expiry");
+      var free = day(body.date, gs.minutes, gs.id);
+      if (free.slots.indexOf(body.start) === -1) throw err(409, "slot_unavailable");
+      gs.date = body.date; gs.start = body.start; gs.end = cal.toTime(cal.toMin(body.start) + gs.minutes);
+      save();
+      return {
+        state: "scheduled", date: gs.date, start: gs.start, giftName: gs.gift_name,
+        services: JSON.parse(gs.services_json).map(function (s) { return { id: s.id, name: s.name }; }),
+        calendar: calendarLinks(gs)
+      };
+    }
+
     if (method === "POST" && path === "dev/mock-pay") {
       var p = find(body && body.id, body && body.t);
       if (p.status === "pending_payment") {
         if (body.result === "ok") {
           p.status = "confirmed";
-          if (p.mode === "gift") p.gift_code = giftCode();
+          if (p.mode === "gift") { p.gift_code = giftCode(); p.gift_expires_at = cal.addDays(today(), 365); }
         } else {
           p.status = "payment_failed";
         }

@@ -16,7 +16,7 @@
   fetch("/api/dev/mock-pay/" + encodeURIComponent(id) + "?t=" + encodeURIComponent(token))
     .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
     .then(function (d) {
-      document.getElementById("demo-when").textContent = d.date + " · " + d.start;
+      document.getElementById("demo-when").textContent = d.date ? d.date + " · " + d.start : "Carte cadeau";
       document.getElementById("demo-amount").textContent =
         new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(d.depositCents / 100);
       ok.disabled = false;

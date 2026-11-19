@@ -5,7 +5,8 @@
   (build-demo.mjs los inyecta en CATALOG_DATA) y misma validación que Catalog.php.
 */
 
-const { categories, services } = CATALOG_DATA;
+const { categories } = CATALOG_DATA;
+const services = CATALOG_DATA.services.filter((s) => s.active !== false);
 const byId = new Map(services.map((s) => [s.id, s]));
 
 function getService(id) {

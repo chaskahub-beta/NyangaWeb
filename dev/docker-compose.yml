@@ -17,14 +17,12 @@ services:
       NYANGA_CONFIG: /var/www/dev/config.local.php
     depends_on:
       - db
+  # MariaDB (compatible con MySQL) instalada desde Debian: ver db.Dockerfile
   db:
-    image: mysql:8.0
-    pull_policy: never
-    environment:
-      MYSQL_DATABASE: nyanga
-      MYSQL_USER: nyanga
-      MYSQL_PASSWORD: nyanga-dev
-      MYSQL_ROOT_PASSWORD: root-dev
+    build:
+      context: .
+      dockerfile: db.Dockerfile
+      pull: false
     volumes:
       - db-data:/var/lib/mysql
   # Servidor de correo FICTICIO "mail.nyanga.test", configurado como el de Hostinet:

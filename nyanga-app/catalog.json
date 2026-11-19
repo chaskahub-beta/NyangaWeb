@@ -27,8 +27,8 @@
       "id": "signature",
       "cat": "massages",
       "price": 60,
-      "duration": 70,
-      "slotMinutes": 70,
+      "duration": 60,
+      "slotMinutes": 60,
       "name": {
         "fr": "Massage signature Nyanga",
         "en": "Nyanga signature massage"
@@ -46,8 +46,8 @@
       "id": "relaxant",
       "cat": "massages",
       "price": 50,
-      "duration": 60,
-      "slotMinutes": 60,
+      "duration": 50,
+      "slotMinutes": 50,
       "name": {
         "fr": "Massage relaxant",
         "en": "Relaxing massage"
@@ -70,6 +70,40 @@
       "desc": {
         "fr": "Conçu pour les corps actifs : pétrissage profond et friction ciblée pour favoriser la récupération musculaire, améliorer la souplesse et prévenir les blessures.",
         "en": "Designed for active bodies: deep kneading and targeted friction to support muscle recovery, improve flexibility and prevent injury."
+      }
+    },
+    {
+      "id": "headspa-enfant",
+      "cat": "headspa",
+      "price": 30,
+      "duration": 30,
+      "slotMinutes": 30,
+      "name": {
+        "fr": "Head spa enfant",
+        "en": "Kids' head spa"
+      },
+      "sub": {
+        "fr": "Jusqu’à 10 ans",
+        "en": "Up to 10 years old"
+      },
+      "desc": {
+        "fr": "Un moment de pure détente spécialement adapté aux enfants pour découvrir les bienfaits du Head Spa tout en douceur.",
+        "en": "A moment of pure relaxation specially adapted for children, to gently discover the benefits of the Head Spa."
+      }
+    },
+    {
+      "id": "headspa-ado",
+      "cat": "headspa",
+      "price": 50,
+      "duration": 45,
+      "slotMinutes": 45,
+      "name": {
+        "fr": "Head spa ado",
+        "en": "Teen head spa"
+      },
+      "desc": {
+        "fr": "Un moment de détente spécialement pensé pour les adolescents, alliant nettoyage du cuir chevelu, soins capillaires, massage relaxant et modelage des épaules.",
+        "en": "A relaxing moment designed especially for teenagers, combining scalp cleansing, hair care, a relaxing massage and a shoulder massage."
       }
     },
     {
@@ -145,9 +179,29 @@
       }
     },
     {
+      "id": "minceur",
+      "cat": "soins",
+      "price": 0,
+      "duration": null,
+      "slotMinutes": 60,
+      "active": false,
+      "name": {
+        "fr": "Soin minceur",
+        "en": "Slimming treatment"
+      },
+      "sub": {
+        "fr": "Lipocavitation & radiofréquence",
+        "en": "Lipocavitation & radiofrequency"
+      },
+      "desc": {
+        "fr": "Un soin minceur associant lipocavitation par ultrasons et radiofréquence pour cibler les zones concernées, améliorer l’aspect de la peau et favoriser une silhouette plus harmonieuse.\n\nLipocavitation par ultrasons : utilise des ultrasons pour agir sur les tissus adipeux localisés et accompagner le travail sur certaines zones du corps.\n\nRadiofréquence : diffuse une énergie thermique dans les tissus pour stimuler la production naturelle de collagène et améliorer l’aspect et la fermeté de la peau.",
+        "en": "A slimming treatment combining ultrasonic lipocavitation and radiofrequency to target specific areas, improve the appearance of the skin and support a more harmonious silhouette.\n\nUltrasonic lipocavitation: uses ultrasound to act on localised fatty tissue on specific areas of the body.\n\nRadiofrequency: delivers thermal energy into the tissues to stimulate natural collagen production and improve the appearance and firmness of the skin."
+      }
+    },
+    {
       "id": "pieds",
       "cat": "soins",
-      "price": 50,
+      "price": 60,
       "duration": null,
       "slotMinutes": 60,
       "name": {
@@ -155,8 +209,8 @@
         "en": "Foot ritual"
       },
       "desc": {
-        "fr": "Massage des pieds à l'huile chaude, vernis semi-permanent inclus.",
-        "en": "Warm oil foot massage, semi-permanent polish included."
+        "fr": "Un rituel douceur pour prendre soin de vos pieds, les exfolier, les hydrater et leur offrir un agréable moment de détente. Vernis semi-permanent inclus.",
+        "en": "A gentle ritual to care for your feet: exfoliation, hydration and a pleasant moment of relaxation. Semi-permanent polish included."
       }
     },
     {
@@ -170,14 +224,14 @@
         "en": "Hand ritual"
       },
       "desc": {
-        "fr": "Soin à la paraffine, vernis semi-permanent inclus.",
-        "en": "Paraffin treatment, semi-permanent polish included."
+        "fr": "Un rituel douceur alliant exfoliation, soin à la paraffine et pose de vernis semi-permanent pour des mains douces et sublimées.",
+        "en": "A gentle ritual combining exfoliation, a paraffin treatment and semi-permanent polish for soft, beautiful hands."
       }
     },
     {
       "id": "visage",
       "cat": "soins",
-      "price": 40,
+      "price": 60,
       "duration": null,
       "slotMinutes": 45,
       "name": {
@@ -185,9 +239,10 @@
         "en": "Facial ritual"
       },
       "desc": {
-        "fr": "Avec vapozone et luminothérapie.",
-        "en": "With vapozone steam and light therapy."
-      }
+        "fr": "Un rituel beauté personnalisé pour prendre soin de votre peau, lui redonner éclat, fraîcheur et douceur tout en profitant d’un véritable moment de détente.",
+        "en": "A personalised beauty ritual to care for your skin and restore its radiance, freshness and softness, while enjoying a true moment of relaxation."
+      },
+      "priceFrom": true
     },
     {
       "id": "tresses",
@@ -200,9 +255,10 @@
         "en": "African braids"
       },
       "desc": {
-        "fr": "Tous types de tresses.",
-        "en": "All types of braids."
-      }
+        "fr": "Pour une coiffure tendance, élégante et personnalisée.",
+        "en": "For a trendy, elegant and personalised hairstyle."
+      },
+      "priceFrom": true
     }
   ]
 }

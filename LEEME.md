@@ -46,7 +46,24 @@ En el hosting debe quedar así:
    - Si responde `db_unavailable`, revisa los datos de la base.
 8. **SumUp** (cuando la empresa dé los datos): pon `api_key` (`sk_…`) y `merchant_code` en `config.php`. Mientras estén vacíos, el pago es **simulado**.
 
-El panel está en `https://tu-dominio/admin`.
+El panel está en `https://tu-dominio/admin`. Desde ahí la empresa gestiona:
+
+- **Agenda**: las reservas.
+- **Calendrier**: días y franjas bloqueados.
+- **Cartes cadeau**: validar los códigos.
+- **Soins**: precio, nombre, descripción, duraciones, categoría y orden de cada soin. También puede añadir, ocultar o borrar soins. Los cambios se ven al instante en la web; las reservas ya hechas conservan su nombre y su precio.
+- **Réglages**: horarios de apertura (también se muestran en la sección Contact), intervalo entre citas y pausa entre clientas.
+
+La primera vez, los soins se copian de `nyanga-app/catalog.json` a la base de datos; después ese archivo solo se usa para la demo de GitHub.
+
+### Carte cadeau y reembolsos
+
+- **Carte cadeau:** se paga al 100 % y vale 1 año. El beneficiario recibe un correo con un enlace (`/?cadeau=CÓDIGO`). Ahí confirma su nombre y el código y elige día y hora; se le envía la confirmación a él y a la empresa. En el panel, *Cartes cadeau → À planifier* lista las tarjetas aún sin fecha, con su enlace para copiar. Desde la ficha se puede **liberar la fecha** para que el beneficiario elija otra.
+- **Reembolsos:** solo hasta 48 h antes y solo por WhatsApp. En la ficha de la reserva, **Rembourser** registra el importe y libera el horario. El dinero se devuelve desde la cuenta SumUp de la empresa.
+
+### Foto de la entrada
+
+Guardar la foto como `public_html/img/acces.webp`: aparece sola en Contact, encima del mapa.
 
 ## Copias de seguridad
 

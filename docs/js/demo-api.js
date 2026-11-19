@@ -29,8 +29,8 @@ var CATALOG_DATA = {
       "id": "signature",
       "cat": "massages",
       "price": 60,
-      "duration": 70,
-      "slotMinutes": 70,
+      "duration": 60,
+      "slotMinutes": 60,
       "name": {
         "fr": "Massage signature Nyanga",
         "en": "Nyanga signature massage"
@@ -48,8 +48,8 @@ var CATALOG_DATA = {
       "id": "relaxant",
       "cat": "massages",
       "price": 50,
-      "duration": 60,
-      "slotMinutes": 60,
+      "duration": 50,
+      "slotMinutes": 50,
       "name": {
         "fr": "Massage relaxant",
         "en": "Relaxing massage"
@@ -72,6 +72,40 @@ var CATALOG_DATA = {
       "desc": {
         "fr": "Conçu pour les corps actifs : pétrissage profond et friction ciblée pour favoriser la récupération musculaire, améliorer la souplesse et prévenir les blessures.",
         "en": "Designed for active bodies: deep kneading and targeted friction to support muscle recovery, improve flexibility and prevent injury."
+      }
+    },
+    {
+      "id": "headspa-enfant",
+      "cat": "headspa",
+      "price": 30,
+      "duration": 30,
+      "slotMinutes": 30,
+      "name": {
+        "fr": "Head spa enfant",
+        "en": "Kids' head spa"
+      },
+      "sub": {
+        "fr": "Jusqu’à 10 ans",
+        "en": "Up to 10 years old"
+      },
+      "desc": {
+        "fr": "Un moment de pure détente spécialement adapté aux enfants pour découvrir les bienfaits du Head Spa tout en douceur.",
+        "en": "A moment of pure relaxation specially adapted for children, to gently discover the benefits of the Head Spa."
+      }
+    },
+    {
+      "id": "headspa-ado",
+      "cat": "headspa",
+      "price": 50,
+      "duration": 45,
+      "slotMinutes": 45,
+      "name": {
+        "fr": "Head spa ado",
+        "en": "Teen head spa"
+      },
+      "desc": {
+        "fr": "Un moment de détente spécialement pensé pour les adolescents, alliant nettoyage du cuir chevelu, soins capillaires, massage relaxant et modelage des épaules.",
+        "en": "A relaxing moment designed especially for teenagers, combining scalp cleansing, hair care, a relaxing massage and a shoulder massage."
       }
     },
     {
@@ -147,9 +181,29 @@ var CATALOG_DATA = {
       }
     },
     {
+      "id": "minceur",
+      "cat": "soins",
+      "price": 0,
+      "duration": null,
+      "slotMinutes": 60,
+      "active": false,
+      "name": {
+        "fr": "Soin minceur",
+        "en": "Slimming treatment"
+      },
+      "sub": {
+        "fr": "Lipocavitation & radiofréquence",
+        "en": "Lipocavitation & radiofrequency"
+      },
+      "desc": {
+        "fr": "Un soin minceur associant lipocavitation par ultrasons et radiofréquence pour cibler les zones concernées, améliorer l’aspect de la peau et favoriser une silhouette plus harmonieuse.\n\nLipocavitation par ultrasons : utilise des ultrasons pour agir sur les tissus adipeux localisés et accompagner le travail sur certaines zones du corps.\n\nRadiofréquence : diffuse une énergie thermique dans les tissus pour stimuler la production naturelle de collagène et améliorer l’aspect et la fermeté de la peau.",
+        "en": "A slimming treatment combining ultrasonic lipocavitation and radiofrequency to target specific areas, improve the appearance of the skin and support a more harmonious silhouette.\n\nUltrasonic lipocavitation: uses ultrasound to act on localised fatty tissue on specific areas of the body.\n\nRadiofrequency: delivers thermal energy into the tissues to stimulate natural collagen production and improve the appearance and firmness of the skin."
+      }
+    },
+    {
       "id": "pieds",
       "cat": "soins",
-      "price": 50,
+      "price": 60,
       "duration": null,
       "slotMinutes": 60,
       "name": {
@@ -157,8 +211,8 @@ var CATALOG_DATA = {
         "en": "Foot ritual"
       },
       "desc": {
-        "fr": "Massage des pieds à l'huile chaude, vernis semi-permanent inclus.",
-        "en": "Warm oil foot massage, semi-permanent polish included."
+        "fr": "Un rituel douceur pour prendre soin de vos pieds, les exfolier, les hydrater et leur offrir un agréable moment de détente. Vernis semi-permanent inclus.",
+        "en": "A gentle ritual to care for your feet: exfoliation, hydration and a pleasant moment of relaxation. Semi-permanent polish included."
       }
     },
     {
@@ -172,14 +226,14 @@ var CATALOG_DATA = {
         "en": "Hand ritual"
       },
       "desc": {
-        "fr": "Soin à la paraffine, vernis semi-permanent inclus.",
-        "en": "Paraffin treatment, semi-permanent polish included."
+        "fr": "Un rituel douceur alliant exfoliation, soin à la paraffine et pose de vernis semi-permanent pour des mains douces et sublimées.",
+        "en": "A gentle ritual combining exfoliation, a paraffin treatment and semi-permanent polish for soft, beautiful hands."
       }
     },
     {
       "id": "visage",
       "cat": "soins",
-      "price": 40,
+      "price": 60,
       "duration": null,
       "slotMinutes": 45,
       "name": {
@@ -187,9 +241,10 @@ var CATALOG_DATA = {
         "en": "Facial ritual"
       },
       "desc": {
-        "fr": "Avec vapozone et luminothérapie.",
-        "en": "With vapozone steam and light therapy."
-      }
+        "fr": "Un rituel beauté personnalisé pour prendre soin de votre peau, lui redonner éclat, fraîcheur et douceur tout en profitant d’un véritable moment de détente.",
+        "en": "A personalised beauty ritual to care for your skin and restore its radiance, freshness and softness, while enjoying a true moment of relaxation."
+      },
+      "priceFrom": true
     },
     {
       "id": "tresses",
@@ -202,9 +257,10 @@ var CATALOG_DATA = {
         "en": "African braids"
       },
       "desc": {
-        "fr": "Tous types de tresses.",
-        "en": "All types of braids."
-      }
+        "fr": "Pour une coiffure tendance, élégante et personnalisée.",
+        "en": "For a trendy, elegant and personalised hairstyle."
+      },
+      "priceFrom": true
     }
   ]
 };
@@ -365,7 +421,8 @@ window.__NYANGA_MODULES.calendar = module.exports;
   (build-demo.mjs los inyecta en CATALOG_DATA) y misma validación que Catalog.php.
 */
 
-const { categories, services } = CATALOG_DATA;
+const { categories } = CATALOG_DATA;
+const services = CATALOG_DATA.services.filter((s) => s.active !== false);
 const byId = new Map(services.map((s) => [s.id, s]));
 
 function getService(id) {
@@ -597,7 +654,14 @@ window.__NYANGA_MODULES.ics = module.exports;
     holdMinutes: 30,
     address: "Nyanga Beauty & Spa, 2 impasse des Charmilles, 25300 Granges-Narboz, France",
     settings: {
-      openingHours: { 0: [], 1: [["09:30", "18:30"]], 2: [["09:30", "18:30"]], 3: [["09:30", "18:30"]], 4: [["09:30", "18:30"]], 5: [["09:30", "18:30"]], 6: [] },
+      openingHours: {
+        0: [], 1: [],
+        2: [["09:30", "12:00"], ["13:30", "16:00"], ["16:30", "19:30"]],
+        3: [["09:00", "12:00"], ["13:30", "19:00"]],
+        4: [["09:30", "12:00"], ["13:30", "16:00"], ["16:30", "19:30"]],
+        5: [["09:00", "12:00"], ["13:30", "19:00"]],
+        6: [["09:00", "12:00"], ["13:30", "19:00"]]
+      },
       slotStep: 30,
       bufferMinutes: 15
     }
@@ -667,8 +731,10 @@ window.__NYANGA_MODULES.ics = module.exports;
     if (mode !== "me" && mode !== "gift") throw err(400, "invalid_mode");
     var sel;
     try { sel = catalog.priceSelection(input.services); } catch (e) { throw err(400, e.message); }
-    if (!cal.isDate(input.date)) throw err(400, "invalid_date");
-    if (!cal.isTime(input.start)) throw err(400, "invalid_time");
+    if (mode === "me") {
+      if (!cal.isDate(input.date)) throw err(400, "invalid_date");
+      if (!cal.isTime(input.start)) throw err(400, "invalid_time");
+    }
     var c = input.client || {};
     var client = { name: clean(c.name, 100), email: clean(c.email, 254).toLowerCase(), phone: clean(c.phone, 30) };
     var fields = [];
@@ -686,7 +752,11 @@ window.__NYANGA_MODULES.ics = module.exports;
     }
     if (input.acceptDeposit !== true) fields.push("acceptDeposit");
     if (fields.length) throw err(400, "invalid_fields", { fields: fields });
-    return { lang: input.lang === "en" ? "en" : "fr", mode: mode, sel: sel, date: input.date, start: input.start, client: client, gift: gift, payFull: input.payFull === true };
+    return {
+      lang: input.lang === "en" ? "en" : "fr", mode: mode, sel: sel,
+      date: mode === "me" ? input.date : null, start: mode === "me" ? input.start : null,
+      client: client, gift: gift, payFull: mode === "gift" || input.payFull === true
+    };
   }
 
   function paymentUrl(b) {
@@ -717,11 +787,37 @@ window.__NYANGA_MODULES.ics = module.exports;
       giftName: b.mode === "gift" ? b.gift_name : undefined,
       giftCode: ok ? (b.gift_code || undefined) : undefined,
       holdExpiresAt: b.status === "pending_payment" ? b.hold_expires_at : undefined,
-      calendar: b.status === "confirmed" ? calendarLinks(b) : undefined,
+      calendar: b.status === "confirmed" && b.date ? calendarLinks(b) : undefined,
+      giftExpiresAt: ok && b.gift_code ? b.gift_expires_at : undefined,
+      giftLink: ok && b.gift_code ? giftLink(b) : undefined,
       paidFull: !!b.pay_full,
       clientName: b.mode === "gift" ? b.client_name : undefined,
       giftMessage: b.mode === "gift" ? (b.gift_message || undefined) : undefined
     };
+  }
+
+  function giftLink(b) {
+    return location.origin + location.pathname.replace(/[^/]*$/, "") + "?cadeau=" + encodeURIComponent(b.gift_code);
+  }
+
+  function plain(s) {
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  }
+
+  function giftFor(code, name) {
+    var norm = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^NYG/, "");
+    var full = "NYG-" + norm.slice(0, 4) + "-" + norm.slice(4);
+    var b = Object.keys(memory).map(function (k) { return memory[k]; }).filter(function (x) { return x.gift_code === full; })[0];
+    var given = plain(name), whole = b ? plain(b.gift_name) : "";
+    if (!b || !given || (given !== whole && given !== whole.split(" ")[0])) throw err(404, "gift_not_found");
+    return b;
+  }
+
+  function giftState(b) {
+    if (b.status !== "confirmed") return b.status === "cancelled" ? "cancelled" : "not_paid";
+    if (b.date) return "scheduled";
+    if (b.gift_expires_at < today()) return "expired";
+    return "open";
   }
 
   /* ---------- Rutas ---------- */
@@ -734,9 +830,10 @@ window.__NYANGA_MODULES.ics = module.exports;
       return {
         depositRate: CONFIG.depositRate,
         categories: catalog.categories,
-        services: catalog.services.map(function (s) {
-          return { id: s.id, cat: s.cat, price: s.price, duration: s.duration, slotMinutes: s.slotMinutes, name: s.name, sub: s.sub, desc: s.desc };
-        })
+        services: catalog.services.filter(function (s) { return s.active !== false; }).map(function (s) {
+          return { id: s.id, cat: s.cat, price: s.price, priceFrom: !!s.priceFrom, duration: s.duration, slotMinutes: s.slotMinutes, name: s.name, sub: s.sub, desc: s.desc };
+        }),
+        hours: CONFIG.settings.openingHours
       };
     }
 
@@ -763,14 +860,16 @@ window.__NYANGA_MODULES.ics = module.exports;
 
     if (method === "POST" && path === "bookings") {
       var v = validate(body || {});
-      var avail = day(v.date, v.sel.minutes);
-      if (avail.slots.indexOf(v.start) === -1) throw err(409, "slot_unavailable");
+      if (v.mode === "me") {
+        var avail = day(v.date, v.sel.minutes);
+        if (avail.slots.indexOf(v.start) === -1) throw err(409, "slot_unavailable");
+      }
       var total = v.sel.totalCents;
       var b = {
         id: randomId(9), token: randomId(18), status: "pending_payment", created_at: nowIso(),
         hold_expires_at: new Date(Date.now() + CONFIG.holdMinutes * 60000).toISOString(),
         lang: v.lang, mode: v.mode, date: v.date, start: v.start,
-        end: cal.toTime(cal.toMin(v.start) + v.sel.minutes), minutes: v.sel.minutes,
+        end: v.start ? cal.toTime(cal.toMin(v.start) + v.sel.minutes) : null, minutes: v.sel.minutes,
         services_json: JSON.stringify(v.sel.items.map(function (s) {
           return { id: s.id, name: s.name, priceCents: Math.round(s.price * 100), minutes: s.slotMinutes };
         })),
@@ -791,7 +890,7 @@ window.__NYANGA_MODULES.ics = module.exports;
       var bk = find(m[1], (body && body.t) || "");
       if (bk.status === "confirmed" || bk.status === "completed") throw err(409, "not_payable");
       if (bk.status !== "pending_payment") {
-        var again = day(bk.date, bk.minutes, bk.id);
+        var again = bk.date ? day(bk.date, bk.minutes, bk.id) : { slots: [bk.start] };
         if (again.slots.indexOf(bk.start) === -1) throw err(409, "slot_unavailable");
         bk.status = "pending_payment";
         bk.hold_expires_at = new Date(Date.now() + CONFIG.holdMinutes * 60000).toISOString();
@@ -805,12 +904,36 @@ window.__NYANGA_MODULES.ics = module.exports;
       return { depositCents: pb.deposit_cents, status: pb.status, date: pb.date, start: pb.start };
     }
 
+    if (method === "POST" && path === "gift/verify") {
+      var g = giftFor(body && body.code, body && body.name);
+      return {
+        state: giftState(g), giftName: g.gift_name, clientName: g.client_name, lang: g.lang,
+        services: JSON.parse(g.services_json).map(function (s) { return { id: s.id, name: s.name }; }),
+        minutes: g.minutes, totalCents: g.total_cents, expiresAt: g.gift_expires_at, date: g.date, start: g.start
+      };
+    }
+
+    if (method === "POST" && path === "gift/schedule") {
+      var gs = giftFor(body && body.code, body && body.name);
+      if (giftState(gs) !== "open") throw err(409, "gift_" + giftState(gs));
+      if (body.date > gs.gift_expires_at) throw err(409, "gift_date_after_expiry");
+      var free = day(body.date, gs.minutes, gs.id);
+      if (free.slots.indexOf(body.start) === -1) throw err(409, "slot_unavailable");
+      gs.date = body.date; gs.start = body.start; gs.end = cal.toTime(cal.toMin(body.start) + gs.minutes);
+      save();
+      return {
+        state: "scheduled", date: gs.date, start: gs.start, giftName: gs.gift_name,
+        services: JSON.parse(gs.services_json).map(function (s) { return { id: s.id, name: s.name }; }),
+        calendar: calendarLinks(gs)
+      };
+    }
+
     if (method === "POST" && path === "dev/mock-pay") {
       var p = find(body && body.id, body && body.t);
       if (p.status === "pending_payment") {
         if (body.result === "ok") {
           p.status = "confirmed";
-          if (p.mode === "gift") p.gift_code = giftCode();
+          if (p.mode === "gift") { p.gift_code = giftCode(); p.gift_expires_at = cal.addDays(today(), 365); }
         } else {
           p.status = "payment_failed";
         }

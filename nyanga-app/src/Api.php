@@ -16,6 +16,7 @@ final class Api
     private function services(): array
     {
         $db = $this->db();
+        Catalog::useDb($db);
         $payments = new SumUp($this->config, $db);
         return [$db, $payments, new Bookings($this->config, $db, $payments, new Mailer($this->config)), new Auth($this->config, $db)];
     }
@@ -67,12 +68,14 @@ final class Api
         [$db, $payments, $bookings] = $this->services();
 
         if ($method === 'GET' && $path === 'catalog') {
-            header('Cache-Control: public, max-age=300');
+            // Siempre al día: la empresa cambia soins y horarios desde el panel
+            header('Cache-Control: no-cache');
             $cat = Catalog::data();
             self::json([
                 'depositRate' => (float) $this->config['deposit_rate'],
                 'categories' => $cat['categories'],
                 'services' => $cat['services'],
+                'hours' => (object) $db->getSettings()['openingHours'],
             ]);
             return;
         }
@@ -108,6 +111,20 @@ final class Api
             self::json($bookings->retryPayment(rawurldecode($m[1]), (string) ($b['t'] ?? '')));
             return;
         }
+        // Carte cadeau: el beneficiario confirma su nombre y el código, y elige su día
+        if ($method === 'POST' && $path === 'gift/verify') {
+            RateLimit::enforce($db, 'giftv:' . self::ip(), 30, 3600);
+            $in = self::body();
+            self::json($bookings->giftVerify($in['code'] ?? '', $in['name'] ?? ''));
+            return;
+        }
+        if ($method === 'POST' && $path === 'gift/schedule') {
+            RateLimit::enforce($db, 'gifts:' . self::ip(), 20, 3600);
+            $in = self::body();
+            self::json($bookings->giftSchedule($in['code'] ?? '', $in['name'] ?? '', $in['date'] ?? null, $in['start'] ?? null));
+            return;
+        }
+
         // Aviso de SumUp: siempre se vuelve a consultar el cobro
         if ($method === 'POST' && $path === 'payments/sumup/webhook') {
             try { $bookings->handleWebhook(self::body()); } catch (AppError $e) { /* aviso mal formado: se ignora */ }
@@ -161,19 +178,28 @@ final class Api
         if ($method === 'GET' && preg_match('#^bookings/([^/]+)$#', $path, $m)) { self::json($bookings->get(rawurldecode($m[1]))); return; }
         if ($method === 'POST' && preg_match('#^bookings/([^/]+)/action$#', $path, $m)) {
             $in = self::body();
-            self::json($bookings->adminAction(rawurldecode($m[1]), $in['action'] ?? null, ['notify' => ($in['notify'] ?? null) === true, 'note' => $in['note'] ?? null]));
+            self::json($bookings->adminAction(rawurldecode($m[1]), $in['action'] ?? null, ['notify' => ($in['notify'] ?? null) === true, 'note' => $in['note'] ?? null, 'amount' => $in['amount'] ?? null]));
             return;
         }
         if ($method === 'GET' && $path === 'calendar') { self::json($bookings->adminMonth((string) ($_GET['month'] ?? ''))); return; }
         if ($method === 'GET' && $path === 'blocks') { self::json($bookings->blocks($_GET['from'] ?? null, $_GET['to'] ?? null)); return; }
         if ($method === 'POST' && $path === 'blocks') { self::json($bookings->addBlock(self::body()), 201); return; }
         if ($method === 'DELETE' && preg_match('#^blocks/(\d+)$#', $path, $m)) { $bookings->removeBlock($m[1]); self::json(['ok' => true]); return; }
+        if ($method === 'GET' && $path === 'gifts/pending') { self::json($bookings->giftsToSchedule()); return; }
         if ($method === 'GET' && preg_match('#^gift/([^/]+)$#', $path, $m)) { self::json($bookings->giftLookup(rawurldecode($m[1]))); return; }
         if ($method === 'POST' && preg_match('#^gift/([^/]+)/redeem$#', $path, $m)) {
             $in = self::body();
             self::json($bookings->giftRedeem(rawurldecode($m[1]), !empty($in['force'])));
             return;
         }
+        // Soins: precio, nombre, descripción, duración, categoría y orden
+        $svc = new ServicesAdmin($db);
+        if ($method === 'GET' && $path === 'services') { self::json($svc->list()); return; }
+        if ($method === 'POST' && $path === 'services') { self::json($svc->create(self::body()), 201); return; }
+        if ($method === 'POST' && $path === 'services/order') { self::json($svc->reorder(self::body()['ids'] ?? null)); return; }
+        if ($method === 'PUT' && preg_match('#^services/([a-z0-9-]+)$#', $path, $m)) { self::json($svc->update($m[1], self::body())); return; }
+        if ($method === 'DELETE' && preg_match('#^services/([a-z0-9-]+)$#', $path, $m)) { $svc->delete($m[1]); self::json(['ok' => true]); return; }
+
         if ($method === 'GET' && $path === 'settings') { self::json(self::settingsOut($db->getSettings())); return; }
         if ($method === 'PUT' && $path === 'settings') {
             $next = self::validateSettings(self::body(), $db->getSettings());

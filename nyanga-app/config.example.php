@@ -13,6 +13,8 @@ return [
     'business_address' => 'Nyanga Beauty & Spa, 2 impasse des Charmilles, 25300 Granges-Narboz, France',
     // Teléfono que aparece en el pie de los correos
     'business_phone' => '06 64 29 77 67',
+    // WhatsApp para cualquier duda, cambio, anulación o reembolso (formato internacional, solo cifras)
+    'whatsapp' => '33664297767',
 
     // Base de datos MySQL (cPanel → Bases de datos MySQL)
     'db' => [

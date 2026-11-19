@@ -17,13 +17,19 @@ let now = new Date("2026-11-14T10:00:00Z");
 
 function sql(q) {
   execFileSync("docker", ["compose", "-f", path.join(DEV, "docker-compose.yml"), "exec", "-T", "db",
-    "mysql", "-unyanga", "-pnyanga-dev", "nyanga", "-e", q], { stdio: "pipe" });
+    "mariadb", "-unyanga", "-pnyanga-dev", "nyanga", "-e", q], { stdio: "pipe" });
 }
 
 test.before(async () => {
   sql("DELETE FROM bookings; DELETE FROM blocks; DELETE FROM settings; DELETE FROM rate_limits; DELETE FROM mock_checkouts;");
+  setTestHours();
   await fetch(MAILPIT + "/api/v1/messages", { method: "DELETE" });
 });
+
+function testHours() { return JSON.stringify({ openingHours: { 0: [], 1: [["09:30", "18:30"]], 2: [["09:30", "18:30"]], 3: [["09:30", "18:30"]], 4: [["09:30", "18:30"]], 5: [["09:30", "18:30"]], 6: [] }, slotStep: 30, bufferMinutes: 15 }); }
+function setTestHours() {
+  sql(`REPLACE INTO settings (setting_key, setting_value) VALUES ('main', '${testHours()}')`);
+}
 
 async function call(method, url, body, headers = {}) {
   const res = await fetch(BASE + url, {
@@ -62,7 +68,11 @@ async function login() {
 test("catalogue", async () => {
   const r = await call("GET", "/api/catalog");
   assert.equal(r.status, 200);
-  assert.equal(r.data.services.length, 11);
+  assert.equal(r.data.services.length, 13, "14 soins dont « Soin minceur » masqué en attendant son prix");
+  const visage = r.data.services.find((s) => s.id === "visage");
+  assert.equal(visage.priceFrom, true);
+  assert.equal(visage.price, 60);
+  assert.equal(r.data.services.find((s) => s.id === "signature").duration, 60);
   assert.equal(r.data.depositRate, 0.2);
 });
 
@@ -119,7 +129,7 @@ test("réservation pour moi : paiement, confirmation, e-mails et agenda", async 
   assert.equal(toClient.Subject, "Votre réservation chez Nyanga Beauty est confirmée");
 
   assert.ok(s.data.calendar.ics.endsWith(icsUrl));
-  assert.match(s.data.calendar.google, /dates=20261116T090000Z%2F20261116T114000Z/);
+  assert.match(s.data.calendar.google, /dates=20261116T090000Z%2F20261116T113000Z/);
   const ics = await fetch(BASE + icsUrl);
   assert.equal(ics.status, 200);
   assert.match(ics.headers.get("content-type"), /text\/calendar/);
@@ -139,34 +149,104 @@ test("mauvais jeton = introuvable", async () => {
   assert.equal((await call("GET", `/api/bookings/${created.data.id}?t=faux`)).status, 404);
 });
 
-test("carte cadeau : code unique, 3 e-mails, validité à la date", async () => {
+test("carte cadeau : sans date, payée à 100 %, le bénéficiaire choisit son jour", async () => {
   const before = await mailCount();
   const created = await call("POST", "/api/bookings", bookingBody({
-    mode: "gift", start: "16:30", services: ["hammam"],
+    mode: "gift", date: null, start: null, services: ["hammam"],
     gift: { name: "Claire Martin", age: 34, email: "claire@example.com", message: "Joyeux anniversaire" }
   }));
   assert.equal(created.status, 201);
+  let s = await call("GET", `/api/bookings/${created.data.id}?t=${created.data.token}`);
+  assert.equal(s.data.depositCents, 7000, "la carte cadeau se paie en totalité");
+  assert.equal(s.data.date, null);
   await pay(created.data);
-  const s = await call("GET", `/api/bookings/${created.data.id}?t=${created.data.token}`);
+  s = await call("GET", `/api/bookings/${created.data.id}?t=${created.data.token}`);
   assert.equal(s.data.status, "confirmed");
   assert.match(s.data.giftCode, /^NYG-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
-  assert.equal((await mailCount()) - before, 3, "acheteur + bénéficiaire + entreprise");
+  assert.equal(s.data.giftExpiresAt, "2027-11-14", "valable 1 an");
+  assert.ok(s.data.giftLink.endsWith("/?cadeau=" + s.data.giftCode));
+  assert.equal(s.data.calendar, undefined, "pas d'agenda avant le choix de la date");
+  const sent = (await mails()).slice(0, (await mailCount()) - before);
+  assert.equal(sent.length, 3, "acheteur + bénéficiaire + entreprise");
+  const toRecipient = sent.find((m) => m.To[0].Address === "claire@example.com");
+  const rhtml = await fetch(`${MAILPIT}/api/v1/message/${toRecipient.ID}`).then((r) => r.json()).then((m) => m.HTML);
+  assert.match(rhtml, /Choisir mon rendez-vous/);
+  assert.ok(rhtml.includes("?cadeau=" + s.data.giftCode));
+  assert.match(rhtml, /wa\.me\/33664297767/, "aide WhatsApp");
 
+  // Le bénéficiaire : prénom + code
+  const code = s.data.giftCode;
+  assert.equal((await call("POST", "/api/gift/verify", { code, name: "Paul" })).status, 404);
+  const v = await call("POST", "/api/gift/verify", { code: code.toLowerCase().replace(/-/g, " "), name: "claire" });
+  assert.equal(v.status, 200);
+  assert.equal(v.data.state, "open");
+  assert.equal(v.data.minutes, 60);
+  assert.equal(v.data.expiresAt, "2027-11-14");
+
+  // Il choisit sa date → confirmation au bénéficiaire et à l'entreprise
+  const before2 = await mailCount();
+  const sch = await call("POST", "/api/gift/schedule", { code, name: "Claire Martin", date: DAY, start: "16:30" });
+  assert.equal(sch.status, 200);
+  assert.equal(sch.data.state, "scheduled");
+  assert.ok(sch.data.calendar.ics);
+  assert.equal((await mailCount()) - before2, 2, "bénéficiaire + entreprise");
+  assert.equal((await call("POST", "/api/gift/schedule", { code, name: "Claire", date: DAY, start: "17:00" })).data.error, "gift_scheduled");
+  assert.equal((await call("POST", "/api/gift/verify", { code, name: "Claire" })).data.state, "scheduled");
+  const day = await call("GET", `/api/availability/day?date=${DAY}&minutes=60`);
+  assert.ok(!day.data.slots.includes("16:30"), "le créneau est pris");
+
+  // Panel : recherche et validation le jour J
   const H = await login();
-  const code = s.data.giftCode.toLowerCase().replace(/-/g, " ");
-  const look = await call("GET", `/api/admin/gift/${encodeURIComponent(code)}`, null, H);
-  assert.equal(look.status, 200);
+  const look = await call("GET", `/api/admin/gift/${encodeURIComponent(code.toLowerCase())}`, null, H);
+  assert.equal(look.data.scheduled, true);
   assert.equal(look.data.validToday, false);
-  assert.equal((await call("POST", `/api/admin/gift/${s.data.giftCode}/redeem`, {}, H)).data.error, "wrong_date");
-
+  assert.equal((await call("POST", `/api/admin/gift/${code}/redeem`, {}, H)).data.error, "wrong_date");
   now = new Date("2026-11-16T09:00:00Z"); // le jour du rendez-vous
-  assert.equal((await call("POST", `/api/admin/gift/${s.data.giftCode}/redeem`, {}, H)).status, 401, "session expirée après 12 h");
+  assert.equal((await call("POST", `/api/admin/gift/${code}/redeem`, {}, H)).status, 401, "session expirée après 12 h");
   const H2 = await login();
-  const ok = await call("POST", `/api/admin/gift/${s.data.giftCode}/redeem`, {}, H2);
-  assert.equal(ok.status, 200);
+  const ok = await call("POST", `/api/admin/gift/${code}/redeem`, {}, H2);
   assert.equal(ok.data.redeemed, true);
-  assert.equal((await call("POST", `/api/admin/gift/${s.data.giftCode}/redeem`, {}, H2)).data.error, "already_redeemed");
+  assert.equal((await call("POST", `/api/admin/gift/${code}/redeem`, {}, H2)).data.error, "already_redeemed");
   now = new Date("2026-11-14T10:00:00Z");
+});
+
+test("carte cadeau : à planifier, libérer la date, expiration", async () => {
+  const created = await call("POST", "/api/bookings", bookingBody({
+    mode: "gift", services: ["headspa-enfant"],
+    gift: { name: "Noé", age: 8, email: "noe@example.com" }
+  }));
+  await pay(created.data);
+  const s = await call("GET", `/api/bookings/${created.data.id}?t=${created.data.token}`);
+  const H = await login();
+  const pending = await call("GET", "/api/admin/gifts/pending", null, H);
+  assert.ok(pending.data.some((b) => b.id === created.data.id && b.gift_link));
+
+  // Date au-delà de la validité refusée
+  const late = await call("POST", "/api/gift/schedule", { code: s.data.giftCode, name: "Noé", date: "2027-12-01", start: "10:00" });
+  assert.equal(late.data.error, "gift_date_after_expiry");
+
+  await call("POST", "/api/gift/schedule", { code: s.data.giftCode, name: "noe", date: "2026-11-19", start: "10:00" });
+  const un = await call("POST", `/api/admin/bookings/${created.data.id}/action`, { action: "unschedule" }, H);
+  assert.equal(un.data.date, null, "le bénéficiaire peut choisir une autre date");
+  assert.equal((await call("POST", "/api/gift/verify", { code: s.data.giftCode, name: "Noé" })).data.state, "open");
+
+  // Un an plus tard : expirée
+  now = new Date("2027-11-20T10:00:00Z");
+  assert.equal((await call("POST", "/api/gift/verify", { code: s.data.giftCode, name: "Noé" })).data.state, "expired");
+  now = new Date("2026-11-14T10:00:00Z");
+});
+
+test("panel : remboursement (accordé sur WhatsApp) libère le créneau", async () => {
+  const b = await call("POST", "/api/bookings", bookingBody({ date: "2026-11-19", start: "14:00" }));
+  await pay(b.data);
+  const H = await login();
+  assert.equal((await call("POST", `/api/admin/bookings/${b.data.id}/action`, { action: "refund", amount: "99" }, H)).data.error, "invalid_amount");
+  const r = await call("POST", `/api/admin/bookings/${b.data.id}/action`, { action: "refund", amount: "10,00", note: "Annulation WhatsApp" }, H);
+  assert.equal(r.data.status, "refunded");
+  assert.equal(r.data.refunded_cents, 1000);
+  assert.match(r.data.admin_note, /Remboursé 10/);
+  const day = await call("GET", "/api/availability/day?date=2026-11-19&minutes=60");
+  assert.ok(day.data.slots.includes("14:00"), "créneau libéré");
 });
 
 test("option : tout payer à l'avance (pour moi et carte cadeau)", async () => {
@@ -192,7 +272,7 @@ test("option : tout payer à l'avance (pour moi et carte cadeau)", async () => {
 
   // Carte cadeau payée en totalité : message pour le bénéficiaire
   const gift = await call("POST", "/api/bookings", bookingBody({
-    mode: "gift", date: "2026-11-20", start: "16:00", services: ["hammam"], payFull: true,
+    mode: "gift", services: ["hammam"],
     gift: { name: "Léa Petit", age: 29, email: "lea@example.com", message: "Bon anniversaire !" }
   }));
   await pay(gift.data);
@@ -205,6 +285,7 @@ test("option : tout payer à l'avance (pour moi et carte cadeau)", async () => {
   assert.match(bhtml, /Envoyer la carte à Léa Petit/);
   assert.match(bhtml, /wa\.me\/\?text=/);
   assert.match(bhtml, /Tout est déjà réglé/);
+  assert.match(bhtml, /\?cadeau=NYG-/, "le message contient le lien pour choisir la date");
 });
 
 test("carte cadeau : données du bénéficiaire obligatoires", async () => {
@@ -273,6 +354,75 @@ test("panel : connexion, blocage d'un jour, réglages, actions", async () => {
   const c = await call("POST", `/api/admin/bookings/${other.id}/action`, { action: "cancel", notify: true }, H);
   assert.equal(c.data.status, "cancelled");
   assert.ok((await mailCount()) > before, "e-mail d'annulation envoyé");
+});
+
+test("panel : soins (modifier, ajouter, masquer, ordonner, supprimer)", async () => {
+  const H = await login();
+  assert.equal((await call("GET", "/api/admin/services")).status, 401, "réservé au panel");
+  const list = await call("GET", "/api/admin/services", null, H);
+  assert.equal(list.data.services.length, 14);
+  const relax = list.data.services.find((s) => s.id === "relaxant");
+
+  // Modifier le prix et la description → le site et le prix de réservation suivent
+  const upd = await call("PUT", "/api/admin/services/relaxant", { ...relax, price: "55,50", desc_fr: "Nouvelle description" }, H);
+  assert.equal(upd.status, 200);
+  assert.equal(upd.data.price, 55.5);
+  let cat = await call("GET", "/api/catalog");
+  const pub = cat.data.services.find((s) => s.id === "relaxant");
+  assert.equal(pub.price, 55.5);
+  assert.equal(pub.desc.fr, "Nouvelle description");
+  assert.equal(pub.name.en, "Relaxing massage");
+  const b = await call("POST", "/api/bookings", bookingBody({ date: "2026-11-25", start: "09:30" }));
+  const st = await call("GET", `/api/bookings/${b.data.id}?t=${b.data.token}`);
+  assert.equal(st.data.totalCents, 5550, "le prix vient du panel");
+
+  // Validation
+  const bad = await call("POST", "/api/admin/services", { cat: "inconnue", name_fr: "", price: "abc" }, H);
+  assert.equal(bad.status, 400);
+  assert.deepEqual(bad.data.fields.sort(), ["cat", "name_fr", "price", "slot_minutes"]);
+
+  // Ajouter (sans anglais → l'anglais reprend le français)
+  const add = await call("POST", "/api/admin/services", { cat: "massages", name_fr: "Massage aux pierres chaudes", price: 85, duration: 75 }, H);
+  assert.equal(add.status, 201);
+  assert.equal(add.data.id, "massage-aux-pierres-chaudes");
+  assert.equal(add.data.slot_minutes, 75, "agenda = durée si vide");
+  cat = await call("GET", "/api/catalog");
+  const added = cat.data.services.find((s) => s.id === add.data.id);
+  assert.equal(added.name.en, "Massage aux pierres chaudes");
+  assert.equal(cat.data.services.filter((s) => s.cat === "massages").pop().id, add.data.id, "à la fin de sa catégorie");
+
+  // Ordonner : le nouveau soin en premier
+  const ids = (await call("GET", "/api/admin/services", null, H)).data.services.map((s) => s.id);
+  const order = [add.data.id, ...ids.filter((x) => x !== add.data.id)];
+  assert.equal((await call("POST", "/api/admin/services/order", { ids: order }, H)).status, 200);
+  cat = await call("GET", "/api/catalog");
+  assert.equal(cat.data.services[0].id, add.data.id);
+
+  // Masquer → plus sur le site ni réservable
+  await call("PUT", `/api/admin/services/${add.data.id}`, { ...add.data, active: false }, H);
+  cat = await call("GET", "/api/catalog");
+  assert.ok(!cat.data.services.some((s) => s.id === add.data.id));
+  const hidden = await call("POST", "/api/bookings", bookingBody({ services: [add.data.id], date: "2026-11-25", start: "14:00" }));
+  assert.equal(hidden.data.error, "unknown_service");
+
+  // Supprimer, et remettre le prix d'origine
+  assert.equal((await call("DELETE", `/api/admin/services/${add.data.id}`, null, H)).status, 200);
+  assert.equal((await call("GET", "/api/admin/services", null, H)).data.services.length, 14);
+  await call("PUT", "/api/admin/services/relaxant", relax, H);
+  await call("POST", "/api/admin/services/order", { ids: ids.filter((x) => x !== add.data.id) }, H);
+});
+
+test("horaires par défaut (mardi et jeudi en 3 plages) et réglages à 3 plages", async () => {
+  sql("DELETE FROM settings;");
+  const cat = await call("GET", "/api/catalog");
+  assert.deepEqual(cat.data.hours["1"], [], "fermé le lundi");
+  assert.deepEqual(cat.data.hours["2"], [["09:30", "12:00"], ["13:30", "16:00"], ["16:30", "19:30"]]);
+  assert.deepEqual(cat.data.hours["3"], [["09:00", "12:00"], ["13:30", "19:00"]]);
+  assert.deepEqual(cat.data.hours["6"], [["09:00", "12:00"], ["13:30", "19:00"]], "ouvert le samedi");
+  assert.deepEqual(cat.data.hours["0"], []);
+  const tue = await call("GET", "/api/availability/day?date=2026-11-24&minutes=60");
+  assert.ok(tue.data.slots.includes("09:30") && !tue.data.slots.includes("11:30") && tue.data.slots.includes("16:30"));
+  setTestHours();
 });
 
 test("panel : 5 mauvais mots de passe bloquent la connexion", async () => {

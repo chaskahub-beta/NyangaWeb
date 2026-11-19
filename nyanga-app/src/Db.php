@@ -8,15 +8,15 @@ declare(strict_types=1);
 final class Db
 {
     public const DEFAULT_SETTINGS = [
-        // 0 = dimanche … 6 = samedi. Fermé le week-end par défaut.
+        // 0 = dimanche … 6 = samedi. Horaires communiqués par la gérante (modifiables dans le panel).
         'openingHours' => [
             '0' => [],
-            '1' => [['09:30', '18:30']],
-            '2' => [['09:30', '18:30']],
-            '3' => [['09:30', '18:30']],
-            '4' => [['09:30', '18:30']],
-            '5' => [['09:30', '18:30']],
-            '6' => [],
+            '1' => [],
+            '2' => [['09:30', '12:00'], ['13:30', '16:00'], ['16:30', '19:30']],
+            '3' => [['09:00', '12:00'], ['13:30', '19:00']],
+            '4' => [['09:30', '12:00'], ['13:30', '16:00'], ['16:30', '19:30']],
+            '5' => [['09:00', '12:00'], ['13:30', '19:00']],
+            '6' => [['09:00', '12:00'], ['13:30', '19:00']],
         ],
         'slotStep' => 30,
         'bufferMinutes' => 15,
@@ -45,8 +45,9 @@ final class Db
     private function migrate(): void
     {
         try {
-            // pay_full es lo último que se añadió al esquema: si existe, está todo al día
-            $this->pdo->query('SELECT pay_full FROM bookings LIMIT 0');
+            // Lo último que se añadió al esquema: si existe, está todo al día
+            $this->pdo->query('SELECT refunded_cents, gift_expires_at FROM bookings LIMIT 0');
+            $this->pdo->query('SELECT price_from FROM services LIMIT 0');
             $this->pdo->query('SELECT 1 FROM mock_checkouts LIMIT 0');
             return;
         } catch (PDOException $e) {
@@ -60,6 +61,32 @@ final class Db
         // Instalaciones anteriores: columna "pagar el total por adelantado"
         $col = $this->one("SHOW COLUMNS FROM bookings LIKE 'pay_full'");
         if (!$col) $this->pdo->exec('ALTER TABLE bookings ADD COLUMN pay_full TINYINT NOT NULL DEFAULT 0 AFTER deposit_cents');
+
+        // Instalaciones anteriores: carte cadeau sin fecha (1 año), reembolsos, precios «à partir de»
+        $alters = [
+            ['bookings', 'gift_expires_at', "ALTER TABLE bookings MODIFY `date` CHAR(10) NULL, MODIFY `start` CHAR(5) NULL, MODIFY `end` CHAR(5) NULL,
+                ADD COLUMN gift_expires_at CHAR(10) NULL, ADD COLUMN gift_scheduled_at VARCHAR(30) NULL"],
+            ['bookings', 'refunded_cents', 'ALTER TABLE bookings ADD COLUMN refunded_cents INT NULL, ADD COLUMN refunded_at VARCHAR(30) NULL'],
+            ['services', 'price_from', 'ALTER TABLE services ADD COLUMN price_from TINYINT NOT NULL DEFAULT 0 AFTER price_cents, MODIFY desc_fr TEXT NULL, MODIFY desc_en TEXT NULL'],
+        ];
+        foreach ($alters as [$table, $column, $sql]) {
+            if (!$this->one("SHOW COLUMNS FROM `$table` LIKE '$column'")) $this->pdo->exec($sql);
+        }
+
+        // Primera vez: los soins de la carta (catalog.json) pasan a la base, donde se editan desde el panel
+        $count = $this->one('SELECT COUNT(*) AS n FROM services');
+        if ($count && (int) $count['n'] === 0) {
+            $data = json_decode((string) file_get_contents(NYANGA_APP . '/catalog.json'), true);
+            $i = 0;
+            foreach ($data['services'] as $s) {
+                $this->run('INSERT INTO services (id, cat, sort_order, price_cents, price_from, duration, slot_minutes, name_fr, name_en, sub_fr, sub_en, desc_fr, desc_en, active, updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
+                    $s['id'], $s['cat'], ($i++) * 10, (int) round($s['price'] * 100), empty($s['priceFrom']) ? 0 : 1, $s['duration'], (int) $s['slotMinutes'],
+                    $s['name']['fr'], $s['name']['en'] ?? null, $s['sub']['fr'] ?? null, $s['sub']['en'] ?? null,
+                    $s['desc']['fr'] ?? null, $s['desc']['en'] ?? null, isset($s['active']) && !$s['active'] ? 0 : 1, Clock::iso(),
+                ]);
+            }
+        }
     }
 
     public function all(string $sql, array $args = []): array

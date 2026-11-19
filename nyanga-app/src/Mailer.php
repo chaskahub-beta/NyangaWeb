@@ -15,7 +15,15 @@ final class Mailer
             'confirmedSubject' => 'Votre réservation chez Nyanga Beauty est confirmée',
             'confirmedIntro' => 'Merci, votre paiement a bien été reçu. Votre rendez-vous est confirmé.',
             'giftBuyerSubject' => 'Votre carte cadeau Nyanga Beauty',
-            'giftBuyerIntro' => 'Merci, votre paiement a bien été reçu. Voici la carte cadeau offerte à %s : elle lui a aussi été envoyée par e-mail.',
+            'giftBuyerIntro' => 'Merci, votre paiement a bien été reçu. Voici la carte cadeau offerte à %s. Elle lui a aussi été envoyée par e-mail, avec un lien pour choisir le jour et l’heure de son rendez-vous.',
+            'recipientChoose' => 'Vous choisissez votre jour et votre heure quand vous le souhaitez, pendant 1 an : il suffit de confirmer votre prénom et le code de la carte.',
+            'chooseBtn' => 'Choisir mon rendez-vous',
+            'scheduledIntro' => 'Votre rendez-vous offert par %s est réservé. À très bientôt !',
+            'validUntil' => 'Valable jusqu’au',
+            'help' => 'Une question, un imprévu, un changement ou une annulation ? Écrivez-nous sur WhatsApp, nous vous répondons rapidement.',
+            'helpBtn' => 'WhatsApp · 06 64 29 77 67',
+            'waText' => 'Bonjour Nyanga Beauty, ',
+            'refundPolicy' => 'Remboursement possible jusqu’à 48 h avant le rendez-vous, uniquement en nous contactant sur WhatsApp.',
             'giftRecipientSubject' => '%s vous offre un moment chez Nyanga Beauty',
             'giftRecipientIntro' => '%s vous offre un soin chez Nyanga Beauty & Spa.',
             'cancelledSubject' => 'Votre rendez-vous chez Nyanga Beauty est annulé',
@@ -30,17 +38,17 @@ final class Mailer
             'value' => "D'une valeur de",
             'when' => 'Le',
             'code' => 'Code',
-            'giftNote' => 'Non remboursable · valable uniquement à la date du rendez-vous',
-            'bookingNote' => "L'acompte de 20 % n'est pas remboursable",
+            'giftNote' => 'Valable 1 an · tout est réglé · rien à payer sur place',
+            'bookingNote' => 'Remboursable jusqu’à 48 h avant, via WhatsApp',
             'paidNote' => 'Réglé en totalité · rien à payer sur place',
             'date' => 'Date',
             'total' => 'Total des soins',
-            'deposit' => 'Acompte payé (non remboursable)',
+            'deposit' => 'Acompte payé (20 %)',
             'paidFull' => 'Payé en totalité',
             'rest' => 'Reste à régler sur place',
             'nothingLeft' => 'Rien à régler sur place',
             'restPending' => 'Reste à régler sur place le jour du soin',
-            'lost' => 'En cas de perte du code, contactez directement Nyanga Beauty.',
+            'lost' => 'En cas de perte du code, contactez-nous sur WhatsApp.',
             'bring' => 'Présentez ce code le jour du rendez-vous.',
             'signoff' => 'À très bientôt,<br>Nyanga Beauty & Spa',
             'addCalendar' => 'Ajouter à mon agenda',
@@ -48,7 +56,7 @@ final class Mailer
             'calendarGoogle' => 'Google Agenda',
             'calendarHint' => 'Le rendez-vous est aussi en pièce jointe (.ics), avec un rappel la veille et 2 h avant.',
             'shareTitle' => 'Envoyer la carte à %s',
-            'shareIntro' => 'Un message prêt à envoyer, avec toutes les informations de sa carte cadeau :',
+            'shareIntro' => 'Un message prêt à envoyer, avec le lien pour choisir son rendez-vous et le code de sa carte cadeau :',
             'shareWhatsapp' => 'WhatsApp',
             'shareSms' => 'SMS',
             'shareEmail' => 'E-mail',
@@ -59,7 +67,15 @@ final class Mailer
             'confirmedSubject' => 'Your Nyanga Beauty booking is confirmed',
             'confirmedIntro' => 'Thank you, your payment has been received. Your appointment is confirmed.',
             'giftBuyerSubject' => 'Your Nyanga Beauty gift card',
-            'giftBuyerIntro' => 'Thank you, your payment has been received. Here is the gift card for %s: it has also been emailed to them.',
+            'giftBuyerIntro' => 'Thank you, your payment has been received. Here is the gift card for %s. It has also been emailed to them, with a link to choose the day and time of their appointment.',
+            'recipientChoose' => 'Choose your day and time whenever you like, within 1 year: just confirm your first name and the card code.',
+            'chooseBtn' => 'Choose my appointment',
+            'scheduledIntro' => 'Your appointment, a gift from %s, is booked. See you soon!',
+            'validUntil' => 'Valid until',
+            'help' => 'A question, a change of plans or a cancellation? Message us on WhatsApp, we reply quickly.',
+            'helpBtn' => 'WhatsApp · +33 6 64 29 77 67',
+            'waText' => 'Hello Nyanga Beauty, ',
+            'refundPolicy' => 'Refunds are possible up to 48 hours before the appointment, only by contacting us on WhatsApp.',
             'giftRecipientSubject' => '%s is treating you to Nyanga Beauty',
             'giftRecipientIntro' => '%s is giving you a treatment at Nyanga Beauty & Spa.',
             'cancelledSubject' => 'Your Nyanga Beauty appointment is cancelled',
@@ -74,17 +90,17 @@ final class Mailer
             'value' => 'Worth',
             'when' => 'On',
             'code' => 'Code',
-            'giftNote' => 'Non-refundable · valid only on the appointment date',
-            'bookingNote' => 'The 20% deposit is non-refundable',
+            'giftNote' => 'Valid for 1 year · fully paid · nothing to pay on site',
+            'bookingNote' => 'Refundable up to 48 h before, via WhatsApp',
             'paidNote' => 'Paid in full · nothing to pay on site',
             'date' => 'Date',
             'total' => 'Treatments total',
-            'deposit' => 'Deposit paid (non-refundable)',
+            'deposit' => 'Deposit paid (20%)',
             'paidFull' => 'Paid in full',
             'rest' => 'Left to pay on site',
             'nothingLeft' => 'Nothing left to pay on site',
             'restPending' => 'Left to pay on site on the day',
-            'lost' => 'If the code is lost, please contact Nyanga Beauty directly.',
+            'lost' => 'If the code is lost, please contact us on WhatsApp.',
             'bring' => 'Show this code on the day of the appointment.',
             'signoff' => 'See you soon,<br>Nyanga Beauty & Spa',
             'addCalendar' => 'Add to my calendar',
@@ -92,7 +108,7 @@ final class Mailer
             'calendarGoogle' => 'Google Calendar',
             'calendarHint' => 'The appointment is also attached (.ics), with a reminder the day before and 2 h before.',
             'shareTitle' => 'Send the card to %s',
-            'shareIntro' => 'A ready-to-send message with all the details of their gift card:',
+            'shareIntro' => 'A ready-to-send message with the link to choose their appointment and their gift card code:',
             'shareWhatsapp' => 'WhatsApp',
             'shareSms' => 'Text message',
             'shareEmail' => 'Email',
@@ -225,7 +241,7 @@ final class Mailer
     private static function detailsTable(array $b, string $lang): string
     {
         $t = self::T[$lang];
-        $rows = self::row($t['date'], self::esc(self::longDate($b['date'], $lang)) . ' · ' . self::esc($b['start']));
+        $rows = $b['date'] ? self::row($t['date'], self::esc(self::longDate($b['date'], $lang)) . ' · ' . self::esc($b['start'])) : '';
         foreach (json_decode($b['services_json'], true) as $s) {
             $rows .= self::row(self::esc($s['name'][$lang] ?? $s['name']['fr']), Ics::eur((int) $s['priceCents'], $lang));
         }
@@ -262,41 +278,54 @@ final class Mailer
         $pills = self::pill($t['from'], self::esc($b['client_name']))
             . self::pill($t['for'], self::esc($b['gift_name']))
             . self::pill($t['treatment'], self::esc(self::serviceNames($b, $lang)))
-            . self::pill($t['value'], Ics::eur((int) $b['total_cents'], $lang))
-            . self::pill($t['when'], self::esc(self::longDate($b['date'], $lang)) . ' · ' . self::esc($b['start']))
-            . self::pill($t['code'], '<span style="letter-spacing:2px">' . self::esc($b['gift_code']) . '</span>');
-        // Carte cadeau con acompte del 20 %: se indica claramente lo que queda por pagar
-        $rest = (int) $b['total_cents'] - (int) $b['deposit_cents'];
-        if (!self::paidFull($b) && $rest > 0) {
-            $pills .= self::pill($t['restPending'], Ics::eur($rest, $lang));
+            . self::pill($t['value'], Ics::eur((int) $b['total_cents'], $lang));
+        if ($b['date']) {
+            $pills .= self::pill($t['when'], self::esc(self::longDate($b['date'], $lang)) . ' · ' . self::esc($b['start']));
+        } elseif (!empty($b['gift_expires_at'])) {
+            $pills .= self::pill($t['validUntil'], self::esc(self::longDate($b['gift_expires_at'], $lang)));
         }
-        $note = $t['giftNote'] . (self::paidFull($b) ? ' · ' . $t['paidNote'] : '');
-        return $this->card($t['titleGift'], self::esc($t['welcome']), $pills, self::esc($note));
+        $pills .= self::pill($t['code'], '<span style="letter-spacing:2px">' . self::esc($b['gift_code']) . '</span>');
+        return $this->card($t['titleGift'], self::esc($t['welcome']), $pills, self::esc($t['giftNote']));
     }
 
-    /**
-     * Mensaje que la compradora puede enviar al beneficiario (mismo texto que en la web).
-     */
-    public static function shareText(array $b, string $lang): string
+    /** Ayuda: todo imprevisto, cambio, anulación o reembolso se gestiona por WhatsApp. */
+    private function helpBlock(string $lang): string
+    {
+        $t = self::T[$lang];
+        $text = rawurlencode($t['waText']);
+        return '<div style="margin:18px 0 6px;padding:14px 16px;border-radius:12px;background:#EEF3EA;border:1px solid #D5E0CC">
+<div style="font-size:14px;margin-bottom:6px">' . $t['help'] . '</div>
+' . self::btn($this->whatsappUrl() . '?text=' . $text, $t['helpBtn']) . '
+<div style="font-size:12px;color:' . self::INK_SOFT . ';margin-top:6px">' . $t['refundPolicy'] . '</div></div>';
+    }
+
+    private function whatsappUrl(): string
+    {
+        $n = preg_replace('/\D/', '', (string) ($this->config['whatsapp'] ?? '33664297767'));
+        return 'https://wa.me/' . $n;
+    }
+
+    /** Mensaje que la compradora puede enviar al beneficiario (mismo texto que en la web). */
+    public function shareText(array $b, string $lang): string
     {
         $names = self::serviceNames($b, $lang);
-        $when = self::longDate($b['date'], $lang);
-        $rest = (int) $b['total_cents'] - (int) $b['deposit_cents'];
+        $link = $this->config['public_url'] . '/?cadeau=' . rawurlencode((string) $b['gift_code']);
+        $until = !empty($b['gift_expires_at']) ? self::longDate($b['gift_expires_at'], $lang) : '';
         if ($lang === 'en') {
             $lines = [
                 'Hello ' . $b['gift_name'] . '!',
                 'I\'m treating you to "' . $names . '" at Nyanga Beauty & Spa (Granges-Narboz) 🎁',
-                'Your appointment: ' . $when . ' at ' . $b['start'] . '.',
-                'Your gift card code: ' . $b['gift_code'] . ' (show it on the day).',
-                $rest > 0 ? 'The remaining ' . Ics::eur($rest, 'en') . ' is paid on site.' : 'Everything is already paid, enjoy!',
+                'Choose your day and time here: ' . $link,
+                'Your gift card code: ' . $b['gift_code'] . ($until ? ' (valid until ' . $until . ')' : ''),
+                'Everything is already paid, enjoy!',
             ];
         } else {
             $lines = [
                 'Bonjour ' . $b['gift_name'] . ' !',
                 'Je t\'offre « ' . $names . ' » chez Nyanga Beauty & Spa (Granges-Narboz) 🎁',
-                'Ton rendez-vous : le ' . $when . ' à ' . $b['start'] . '.',
-                'Ton code carte cadeau : ' . $b['gift_code'] . ' (à présenter le jour J).',
-                $rest > 0 ? 'Le reste, ' . Ics::eur($rest, 'fr') . ', se règle sur place.' : 'Tout est déjà réglé, profite bien !',
+                'Choisis ton jour et ton heure ici : ' . $link,
+                'Ton code carte cadeau : ' . $b['gift_code'] . ($until ? ' (valable jusqu\'au ' . $until . ')' : ''),
+                'Tout est déjà réglé, profite bien !',
             ];
         }
         if (!empty($b['gift_message'])) $lines[] = '« ' . $b['gift_message'] . ' »';
@@ -307,7 +336,7 @@ final class Mailer
     private function shareBlock(array $b, string $lang): string
     {
         $t = self::T[$lang];
-        $text = self::shareText($b, $lang);
+        $text = $this->shareText($b, $lang);
         $enc = rawurlencode($text);
         $mail = 'mailto:' . rawurlencode((string) $b['gift_email']) . '?subject=' . rawurlencode($t['shareSubject']) . '&body=' . $enc;
         return '<div style="margin:20px 0 4px;padding:16px;border:1px dashed ' . self::GOLD . ';border-radius:12px;background:#FFFDF9">
@@ -327,38 +356,48 @@ final class Mailer
         ];
     }
 
+    private static function quote(?string $msg): string
+    {
+        return $msg ? '<p style="font-family:Georgia,serif;font-style:italic;font-size:16px;border-left:3px solid ' . self::GOLD . ';padding-left:12px;margin:14px 0">' . self::esc($msg) . '</p>' : '';
+    }
+
     /* ---------------- Correos ---------------- */
 
-    /** Correos de una reserva confirmada (clienta o comprador + beneficiario, y la empresa). */
+    /**
+     * Correos tras el pago.
+     * - Pour moi: clienta + empresa (con la cita).
+     * - Carte cadeau sin fecha: comprador (tarjeta + mensaje para enviar), beneficiario (enlace para elegir su día) y empresa.
+     * - Carte cadeau ya planificada (reenvío desde el panel): los correos de la cita.
+     */
     public function confirmationEmails(array $b): array
     {
+        if ($b['mode'] === 'gift' && $b['date']) return $this->giftScheduledEmails($b);
         $lang = $b['lang'] === 'en' ? 'en' : 'fr';
         $t = self::T[$lang];
-        $cal = $this->calendarBlock($b, $lang);
-        $ics = $this->icsAttachment($b, $lang);
         $mails = [];
+        $sign = $this->helpBlock($lang) . '<p style="margin-bottom:0">' . $t['signoff'] . '</p>';
 
         if ($b['mode'] === 'gift') {
             $card = $this->giftCard($b, $lang);
+            $link = $this->config['public_url'] . '/?cadeau=' . rawurlencode((string) $b['gift_code']);
             $mails[] = [
                 'to' => $b['client_email'],
                 'subject' => $t['giftBuyerSubject'],
                 'html' => self::layout($card . self::panel(
                     '<p style="margin-top:0">' . sprintf($t['hello'], self::esc($b['client_name'])) . '</p><p>' . sprintf($t['giftBuyerIntro'], self::esc($b['gift_name'])) . '</p>'
-                    . self::detailsTable($b, $lang) . $this->shareBlock($b, $lang)
-                    . '<p style="font-size:13px;color:' . self::INK_SOFT . '">' . $t['lost'] . '</p><p style="margin-bottom:0">' . $t['signoff'] . '</p>'
+                    . self::detailsTable($b, $lang) . $this->shareBlock($b, $lang) . $sign
                 ), $t['giftBuyerSubject']),
             ];
-            $msg = $b['gift_message'] ? '<p style="font-family:Georgia,serif;font-style:italic;font-size:16px;border-left:3px solid ' . self::GOLD . ';padding-left:12px;margin:14px 0">' . self::esc($b['gift_message']) . '</p>' : '';
             $mails[] = [
                 'to' => $b['gift_email'],
                 'subject' => sprintf($t['giftRecipientSubject'], $b['client_name']),
                 'html' => self::layout($card . self::panel(
                     '<p style="margin-top:0">' . sprintf($t['hello'], self::esc($b['gift_name'])) . '</p><p>' . sprintf($t['giftRecipientIntro'], self::esc($b['client_name'])) . '</p>'
-                    . $msg . '<p>' . $t['bring'] . '</p>' . $cal
-                    . '<p style="font-size:13px;color:' . self::INK_SOFT . '">' . $t['lost'] . '</p><p style="margin-bottom:0">' . $t['signoff'] . '</p>'
+                    . self::quote($b['gift_message'])
+                    . '<p>' . $t['recipientChoose'] . '</p>'
+                    . '<p style="margin:16px 0">' . self::btn($link, $t['chooseBtn']) . '</p>'
+                    . '<p style="font-size:13px;color:' . self::INK_SOFT . '">' . $t['bring'] . '</p>' . $sign
                 ), sprintf($t['giftRecipientIntro'], $b['client_name'])),
-                'attachments' => [$ics],
             ];
         } else {
             $pills = self::pill($t['for'], self::esc($b['client_name']))
@@ -372,12 +411,37 @@ final class Mailer
                 'subject' => $t['confirmedSubject'],
                 'html' => self::layout($card . self::panel(
                     '<p style="margin-top:0">' . sprintf($t['hello'], self::esc($b['client_name'])) . '</p><p>' . $t['confirmedIntro'] . '</p>'
-                    . self::detailsTable($b, $lang) . $cal . '<p style="margin-bottom:0">' . $t['signoff'] . '</p>'
+                    . self::detailsTable($b, $lang) . $this->calendarBlock($b, $lang) . $sign
                 ), $t['confirmedIntro']),
-                'attachments' => [$ics],
+                'attachments' => [$this->icsAttachment($b, $lang)],
             ];
         }
 
+        $company = (string) $this->config['mail']['company_email'];
+        if ($company !== '') $mails[] = $this->companyNotice($b, $company);
+        return $mails;
+    }
+
+    /** El beneficiario eligió su día: confirmación para él/ella y aviso a la empresa. */
+    public function giftScheduledEmails(array $b): array
+    {
+        $lang = $b['lang'] === 'en' ? 'en' : 'fr';
+        $t = self::T[$lang];
+        $pills = self::pill($t['for'], self::esc($b['gift_name']))
+            . self::pill($t['treatment'], self::esc(self::serviceNames($b, $lang)))
+            . self::pill($t['when'], self::esc(self::longDate($b['date'], $lang)) . ' · ' . self::esc($b['start']))
+            . self::pill($t['code'], '<span style="letter-spacing:2px">' . self::esc($b['gift_code']) . '</span>');
+        $card = $this->card($t['titleBooking'], self::esc(sprintf($t['scheduledIntro'], $b['client_name'])), $pills, self::esc($t['paidNote']));
+        $mails = [[
+            'to' => $b['gift_email'],
+            'subject' => $t['confirmedSubject'],
+            'html' => self::layout($card . self::panel(
+                '<p style="margin-top:0">' . sprintf($t['hello'], self::esc($b['gift_name'])) . '</p><p>' . sprintf($t['scheduledIntro'], self::esc($b['client_name'])) . '</p>'
+                . '<p>' . $t['bring'] . '</p>' . $this->calendarBlock($b, $lang)
+                . $this->helpBlock($lang) . '<p style="margin-bottom:0">' . $t['signoff'] . '</p>'
+            ), $t['confirmedSubject']),
+            'attachments' => [$this->icsAttachment($b, $lang)],
+        ]];
         $company = (string) $this->config['mail']['company_email'];
         if ($company !== '') $mails[] = $this->companyNotice($b, $company);
         return $mails;
@@ -387,28 +451,44 @@ final class Mailer
     private function companyNotice(array $b, string $to): array
     {
         $gift = $b['mode'] === 'gift';
-        $kind = $gift ? 'Carte cadeau' : 'Réservation';
+        $dated = (bool) $b['date'];
         $pills = self::pill('Cliente', self::esc($b['client_name']) . ' · ' . self::esc($b['client_phone']))
             . ($gift ? self::pill('Pour', self::esc($b['gift_name']) . ', ' . self::esc($b['gift_age']) . ' ans') : '')
             . self::pill('Soin', self::esc(self::serviceNames($b, 'fr')))
-            . self::pill('Le', self::esc(self::longDate($b['date'], 'fr')) . ' · ' . self::esc($b['start']))
+            . ($dated ? self::pill('Le', self::esc(self::longDate($b['date'], 'fr')) . ' · ' . self::esc($b['start']))
+                      : self::pill('Valable jusqu’au', self::esc(self::longDate((string) $b['gift_expires_at'], 'fr'))))
             . ($gift ? self::pill('Code', self::esc($b['gift_code'])) : '');
+        if ($gift && !$dated) {
+            $title = ['Carte', 'Cadeau'];
+            $intro = 'Nouvelle carte cadeau achetée. Le bénéficiaire choisira son rendez-vous.';
+            $subject = 'Carte cadeau achetée · ' . $b['client_name'] . ' pour ' . $b['gift_name'];
+        } elseif ($gift) {
+            $title = ['Carte cadeau', 'planifiée'];
+            $intro = 'Le bénéficiaire a choisi son rendez-vous.';
+            $subject = 'Carte cadeau planifiée · ' . self::longDate($b['date'], 'fr') . ' ' . $b['start'] . ' · ' . $b['gift_name'];
+        } else {
+            $title = ['Nouvelle', 'Réservation'];
+            $intro = 'Nouvelle réservation confirmée.';
+            $subject = 'Réservation · ' . self::longDate($b['date'], 'fr') . ' ' . $b['start'] . ' · ' . $b['client_name'];
+        }
         $paid = self::paidFull($b) ? 'Payé en totalité en ligne' : 'Acompte de 20 % payé en ligne';
-        $card = $this->card([$kind === 'Carte cadeau' ? 'Carte' : 'Nouvelle', $kind === 'Carte cadeau' ? 'Cadeau' : 'Réservation'],
-            'Nouvelle ' . mb_strtolower($kind, 'UTF-8') . ' confirmée.', $pills, self::esc($paid));
+        $card = $this->card($title, $intro, $pills, self::esc($paid));
         $attention = (int) $b['needs_attention']
             ? '<p style="margin-top:0;color:#A8553C"><b>À vérifier :</b> le paiement est arrivé après l\'expiration de la réservation et le créneau était peut-être déjà pris.</p>'
             : '';
         $contact = '<p style="margin-top:0"><b>Cliente :</b> ' . self::esc($b['client_name']) . '<br>' . self::esc($b['client_email']) . ' · ' . self::esc($b['client_phone']) . '</p>'
             . ($gift ? '<p><b>Bénéficiaire :</b> ' . self::esc($b['gift_name']) . ', ' . self::esc($b['gift_age']) . ' ans · ' . self::esc($b['gift_email'])
                 . ($b['gift_message'] ? '<br><b>Message :</b> ' . self::esc($b['gift_message']) : '') . '</p>' : '');
-        return [
+        $mail = [
             'to' => $to,
-            'subject' => $kind . ' · ' . self::longDate($b['date'], 'fr') . ' ' . $b['start'] . ' · ' . $b['client_name'],
+            'subject' => $subject,
             'html' => self::layout($card . self::panel($attention . $contact . self::detailsTable($b, 'fr')
-                . '<p style="font-size:12px;color:' . self::INK_SOFT . ';margin-bottom:0">Le rendez-vous est en pièce jointe (.ics) pour l\'ajouter à votre agenda.<br>Réf. ' . self::esc($b['id']) . '</p>')),
-            'attachments' => [$this->icsAttachment($b, 'fr', 'company')],
+                . '<p style="font-size:12px;color:' . self::INK_SOFT . ';margin-bottom:0">'
+                . ($dated ? 'Le rendez-vous est en pièce jointe (.ics) pour l\'ajouter à votre agenda.<br>' : '')
+                . 'Réf. ' . self::esc($b['id']) . '</p>')),
         ];
+        if ($dated) $mail['attachments'] = [$this->icsAttachment($b, 'fr', 'company')];
+        return $mail;
     }
 
     /** Anulación: el .ics adjunto (mismo UID, METHOD:CANCEL) quita el evento del calendario. */
@@ -417,14 +497,14 @@ final class Mailer
         $lang = $b['lang'] === 'en' ? 'en' : 'fr';
         $t = self::T[$lang];
         $pills = self::pill($t['treatment'], self::esc(self::serviceNames($b, $lang)))
-            . self::pill($t['when'], self::esc(self::longDate($b['date'], $lang)) . ' · ' . self::esc($b['start']));
+            . ($b['date'] ? self::pill($t['when'], self::esc(self::longDate($b['date'], $lang)) . ' · ' . self::esc($b['start'])) : '');
         $card = $this->card($t['titleCancelled'], self::esc($t['cancelledIntro']), $pills, '');
         $to = $b['mode'] === 'gift' ? [$b['client_email'], $b['gift_email']] : [$b['client_email']];
         return array_map(fn($addr) => [
             'to' => $addr,
             'subject' => $t['cancelledSubject'],
-            'html' => self::layout($card . self::panel(self::detailsTable($b, $lang) . '<p style="margin-bottom:0">' . $t['signoff'] . '</p>'), $t['cancelledIntro']),
-            'attachments' => [$this->icsAttachment($b, $lang, 'client', true)],
+            'html' => self::layout($card . self::panel(self::detailsTable($b, $lang) . $this->helpBlock($lang) . '<p style="margin-bottom:0">' . $t['signoff'] . '</p>'), $t['cancelledIntro']),
+            'attachments' => $b['date'] ? [$this->icsAttachment($b, $lang, 'client', true)] : [],
         ], $to);
     }
 

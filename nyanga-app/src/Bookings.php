@@ -151,8 +151,11 @@ final class Bookings
         $mode = $input['mode'] ?? null;
         if ($mode !== 'me' && $mode !== 'gift') throw new AppError('invalid_mode');
         $sel = Catalog::priceSelection($input['services'] ?? null);
-        if (!Calendar::isDate($input['date'] ?? null)) throw new AppError('invalid_date');
-        if (!Calendar::isTime($input['start'] ?? null)) throw new AppError('invalid_time');
+        // La carte cadeau se compra sin fecha: el beneficiario elige su día después (válida 1 año)
+        if ($mode === 'me') {
+            if (!Calendar::isDate($input['date'] ?? null)) throw new AppError('invalid_date');
+            if (!Calendar::isTime($input['start'] ?? null)) throw new AppError('invalid_time');
+        }
 
         $c = is_array($input['client'] ?? null) ? $input['client'] : [];
         $client = [
@@ -184,10 +187,14 @@ final class Bookings
         if (($input['acceptDeposit'] ?? null) !== true) $fields[] = 'acceptDeposit';
         if ($fields) throw new AppError('invalid_fields', 400, ['fields' => $fields]);
 
-        // Opción secundaria: pagar el total por adelantado (por defecto, acompte del 20 %)
-        $payFull = ($input['payFull'] ?? false) === true;
+        // Pour moi: acompte del 20 % o, como segunda opción, el total. Carte cadeau: siempre el total.
+        $payFull = $mode === 'gift' || ($input['payFull'] ?? false) === true;
 
-        return ['lang' => $lang, 'mode' => $mode, 'sel' => $sel, 'date' => $input['date'], 'start' => $input['start'], 'client' => $client, 'gift' => $gift, 'payFull' => $payFull];
+        return [
+            'lang' => $lang, 'mode' => $mode, 'sel' => $sel,
+            'date' => $mode === 'me' ? $input['date'] : null, 'start' => $mode === 'me' ? $input['start'] : null,
+            'client' => $client, 'gift' => $gift, 'payFull' => $payFull,
+        ];
     }
 
     /* ---------------- Reserva ---------------- */
@@ -195,8 +202,9 @@ final class Bookings
     private function startPayment(array $b, string $attempt): string
     {
         try {
-            $what = (int) $b['pay_full'] ? 'Paiement total' : 'Acompte 20 %';
-            $c = $this->payments->createCheckout($b, $b['id'] . '-' . $attempt, $what . ' Nyanga Beauty · ' . $b['date'] . ' ' . $b['start']);
+            $what = $b['mode'] === 'gift' ? 'Carte cadeau' : ((int) $b['pay_full'] ? 'Paiement total' : 'Acompte 20 %');
+            $when = $b['date'] ? ' · ' . $b['date'] . ' ' . $b['start'] : '';
+            $c = $this->payments->createCheckout($b, $b['id'] . '-' . $attempt, $what . ' Nyanga Beauty' . $when);
             $this->update($b['id'], ['checkout_id' => $c['id'], 'payment_status' => 'PENDING']);
             return $c['url'];
         } catch (Throwable $e) {
@@ -216,14 +224,16 @@ final class Bookings
         $total = $v['sel']['totalCents'];
         // deposit_cents = lo que se paga en línea: el 20 % o el total
         $deposit = $v['payFull'] ? $total : (int) round($total * (float) $this->config['deposit_rate']);
-        $end = Calendar::toTime(Calendar::toMin($v['start']) + $v['sel']['minutes']);
+        $end = $v['start'] ? Calendar::toTime(Calendar::toMin($v['start']) + $v['sel']['minutes']) : null;
         $hold = Clock::isoPlusMinutes((int) $this->config['hold_minutes']);
         $services = array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name'], 'priceCents' => (int) round($s['price'] * 100), 'minutes' => $s['slotMinutes']], $v['sel']['items']);
 
         $payFull = $v['payFull'] ? 1 : 0;
         $this->db->locked(function () use ($v, $id, $token, $total, $deposit, $payFull, $end, $hold, $services) {
-            $avail = $this->day($v['date'], $v['sel']['minutes']);
-            if (!in_array($v['start'], $avail['slots'], true)) throw new AppError('slot_unavailable', 409);
+            if ($v['mode'] === 'me') {
+                $avail = $this->day($v['date'], $v['sel']['minutes']);
+                if (!in_array($v['start'], $avail['slots'], true)) throw new AppError('slot_unavailable', 409);
+            }
             $n = Clock::iso();
             $g = $v['gift'];
             $this->db->run('INSERT INTO bookings (id, token, created_at, lang, mode, `date`, `start`, `end`, minutes, services_json,
@@ -255,8 +265,10 @@ final class Bookings
         $hold = Clock::isoPlusMinutes((int) $this->config['hold_minutes']);
         $this->db->locked(function () use ($fresh, $hold) {
             $this->expireHolds();
-            $avail = $this->day($fresh['date'], (int) $fresh['minutes'], $fresh['id']);
-            if (!in_array($fresh['start'], $avail['slots'], true)) throw new AppError('slot_unavailable', 409);
+            if ($fresh['date']) {
+                $avail = $this->day($fresh['date'], (int) $fresh['minutes'], $fresh['id']);
+                if (!in_array($fresh['start'], $avail['slots'], true)) throw new AppError('slot_unavailable', 409);
+            }
             $this->update($fresh['id'], ['status' => 'pending_payment', 'hold_expires_at' => $hold]);
         });
         $url = $this->startPayment($this->find($b['id']), 'r' . self::randomId(4));
@@ -290,24 +302,29 @@ final class Bookings
     {
         $confirmedNow = $this->db->locked(function () use ($id) {
             $b = $this->find($id);
-            if (in_array($b['status'], self::OCCUPYING, true) || $b['status'] === 'cancelled') return false;
+            if (in_array($b['status'], self::OCCUPYING, true) || in_array($b['status'], ['cancelled', 'refunded'], true)) return false;
 
             // Si la retención ya había caducado, el horario pudo ocuparse
-            $avail = $this->day($b['date'], (int) $b['minutes'], $b['id']);
-            $conflict = !in_array($b['start'], $avail['slots'], true);
-
-            $code = null;
-            if ($b['mode'] === 'gift') {
-                do { $code = self::randomGiftCode(); } while ($this->db->one('SELECT id FROM bookings WHERE gift_code = ?', [$code]));
+            $conflict = false;
+            if ($b['date']) {
+                $avail = $this->day($b['date'], (int) $b['minutes'], $b['id']);
+                $conflict = !in_array($b['start'], $avail['slots'], true);
             }
-            $this->update($id, [
+
+            $fields = [
                 'status' => 'confirmed',
                 'payment_status' => 'PAID',
                 'paid_at' => Clock::iso(),
                 'hold_expires_at' => null,
-                'gift_code' => $code,
                 'needs_attention' => $conflict ? 1 : (int) $b['needs_attention'],
-            ]);
+            ];
+            if ($b['mode'] === 'gift') {
+                do { $code = self::randomGiftCode(); } while ($this->db->one('SELECT id FROM bookings WHERE gift_code = ?', [$code]));
+                $fields['gift_code'] = $code;
+                // Válida 1 año desde la compra
+                $fields['gift_expires_at'] = Calendar::addDays($this->today(), 365);
+            }
+            $this->update($id, $fields);
             return true;
         });
         if ($confirmedNow) $this->sendConfirmation($id);
@@ -330,7 +347,7 @@ final class Bookings
     public function calendarFile($id, $token): string
     {
         $b = $this->findWithToken($id, $token);
-        if ($b['status'] !== 'confirmed' && $b['status'] !== 'completed') throw new AppError('not_found', 404);
+        if (($b['status'] !== 'confirmed' && $b['status'] !== 'completed') || !$b['date']) throw new AppError('not_found', 404);
         return Ics::build($b, $b['lang'], $this->config['business_address']);
     }
 
@@ -366,10 +383,109 @@ final class Bookings
             $out['clientName'] = $b['client_name'];
             $out['giftMessage'] = $b['gift_message'] ?: null;
         }
-        if (in_array($b['status'], ['confirmed', 'completed'], true) && $b['gift_code']) $out['giftCode'] = $b['gift_code'];
+        if (in_array($b['status'], ['confirmed', 'completed'], true) && $b['gift_code']) {
+            $out['giftCode'] = $b['gift_code'];
+            $out['giftExpiresAt'] = $b['gift_expires_at'];
+            $out['giftLink'] = $this->giftLink($b);
+        }
         if ($b['status'] === 'pending_payment') $out['holdExpiresAt'] = $b['hold_expires_at'];
-        if ($b['status'] === 'confirmed') $out['calendar'] = Ics::links($b, $this->config['public_url'], $this->config['business_address'], $b['lang']);
+        if ($b['status'] === 'confirmed' && $b['date']) $out['calendar'] = Ics::links($b, $this->config['public_url'], $this->config['business_address'], $b['lang']);
         return $out;
+    }
+
+    /** Enlace que recibe el beneficiario para elegir su día (debe confirmar su nombre y el código). */
+    public function giftLink(array $b): string
+    {
+        return $this->config['public_url'] . '/?cadeau=' . rawurlencode((string) $b['gift_code']);
+    }
+
+    /* ---------------- Carte cadeau: el beneficiario elige su día ---------------- */
+
+    private static function plain(string $s): string
+    {
+        $s = mb_strtolower(trim($s), 'UTF-8');
+        if (function_exists('iconv')) $s = (string) @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
+        return trim(preg_replace('/[^a-z0-9]+/', ' ', $s) ?? '');
+    }
+
+    /** Busca la carte cadeau por código y comprueba el nombre del beneficiario (nombre completo o solo el nombre). */
+    private function giftFor($code, $name): array
+    {
+        $norm = self::normalizeCode($code);
+        $b = strlen($norm) === 8 ? $this->db->one("SELECT * FROM bookings WHERE gift_code = ? AND mode = 'gift'", ['NYG-' . substr($norm, 0, 4) . '-' . substr($norm, 4)]) : null;
+        $given = self::plain((string) $name);
+        $full = $b ? self::plain((string) $b['gift_name']) : '';
+        $first = explode(' ', $full)[0] ?? '';
+        if (!$b || $given === '' || ($given !== $full && $given !== $first)) throw new AppError('gift_not_found', 404);
+        return $b;
+    }
+
+    private function giftState(array $b): string
+    {
+        if (in_array($b['status'], ['cancelled', 'refunded'], true)) return 'cancelled';
+        if ($b['status'] !== 'confirmed' && $b['status'] !== 'completed' && $b['status'] !== 'no_show') return 'not_paid';
+        if ($b['gift_redeemed_at'] || $b['status'] === 'completed') return 'used';
+        if ($b['date']) return 'scheduled';
+        if ($b['gift_expires_at'] && $b['gift_expires_at'] < $this->today()) return 'expired';
+        return 'open';
+    }
+
+    /** Datos que ve el beneficiario tras confirmar nombre y código. */
+    public function giftVerify($code, $name): array
+    {
+        $b = $this->giftFor($code, $name);
+        $services = json_decode($b['services_json'], true);
+        return [
+            'state' => $this->giftState($b),
+            'giftName' => $b['gift_name'],
+            'clientName' => $b['client_name'],
+            'lang' => $b['lang'],
+            'services' => array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name']], $services),
+            'minutes' => (int) $b['minutes'],
+            'totalCents' => (int) $b['total_cents'],
+            'expiresAt' => $b['gift_expires_at'],
+            'date' => $b['date'],
+            'start' => $b['start'],
+        ];
+    }
+
+    /** El beneficiario elige día y hora: queda reservado sin pagar nada más. */
+    public function giftSchedule($code, $name, $date, $start): array
+    {
+        $b = $this->giftFor($code, $name);
+        $state = $this->giftState($b);
+        if ($state !== 'open') throw new AppError('gift_' . $state, 409);
+        if (!Calendar::isDate($date)) throw new AppError('invalid_date');
+        if (!Calendar::isTime($start)) throw new AppError('invalid_time');
+        if ($b['gift_expires_at'] && $date > $b['gift_expires_at']) throw new AppError('gift_date_after_expiry', 409, ['expiresAt' => $b['gift_expires_at']]);
+
+        $this->db->locked(function () use ($b, $date, $start) {
+            $fresh = $this->find($b['id']);
+            if ($fresh['date']) throw new AppError('gift_scheduled', 409);
+            $avail = $this->day($date, (int) $fresh['minutes'], $fresh['id']);
+            if (!in_array($start, $avail['slots'], true)) throw new AppError('slot_unavailable', 409);
+            $this->update($fresh['id'], [
+                'date' => $date,
+                'start' => $start,
+                'end' => Calendar::toTime(Calendar::toMin($start) + (int) $fresh['minutes']),
+                'gift_scheduled_at' => Clock::iso(),
+            ]);
+        });
+
+        $b = $this->find($b['id']);
+        try {
+            $this->mailer->sendAll($this->mailer->giftScheduledEmails($b));
+        } catch (Throwable $e) {
+            $this->update($b['id'], ['needs_attention' => 1]);
+        }
+        return [
+            'state' => 'scheduled',
+            'date' => $b['date'],
+            'start' => $b['start'],
+            'giftName' => $b['gift_name'],
+            'services' => array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name']], json_decode($b['services_json'], true)),
+            'calendar' => Ics::links($b, $this->config['public_url'], $this->config['business_address'], $b['lang']),
+        ];
     }
 
     /* ---------------- Panel de la empresa ---------------- */
@@ -380,7 +496,16 @@ final class Bookings
         unset($b['services_json'], $b['token']);
         foreach (['minutes', 'total_cents', 'deposit_cents', 'pay_full', 'needs_attention'] as $k) $b[$k] = (int) $b[$k];
         if ($b['gift_age'] !== null) $b['gift_age'] = (int) $b['gift_age'];
+        if ($b['refunded_cents'] !== null) $b['refunded_cents'] = (int) $b['refunded_cents'];
+        if ($b['mode'] === 'gift' && $b['gift_code']) $b['gift_link'] = $this->giftLink($b);
         return $b;
+    }
+
+    /** Cartes cadeau pagadas cuyo beneficiario aún no eligió su día. */
+    public function giftsToSchedule(): array
+    {
+        $rows = $this->db->all("SELECT * FROM bookings WHERE mode = 'gift' AND status = 'confirmed' AND `date` IS NULL ORDER BY gift_expires_at, paid_at");
+        return array_map([$this, 'adminView'], $rows);
     }
 
     public function list(array $q): array
@@ -435,6 +560,23 @@ final class Bookings
                 if (!in_array($b['status'], ['confirmed', 'completed'], true)) throw new AppError('invalid_transition', 409);
                 if (!$this->sendConfirmation($id)) throw new AppError('mail_failed', 502);
                 break;
+            case 'refund':
+                // Reembolso acordado por WhatsApp (hasta 48 h antes). El dinero se devuelve desde SumUp;
+                // aquí se registra y se libera el horario.
+                if (!in_array($b['status'], ['confirmed', 'cancelled', 'no_show'], true) || !$b['paid_at']) throw new AppError('invalid_transition', 409);
+                $amount = $opts['amount'] ?? null;
+                if (is_string($amount)) $amount = str_replace(',', '.', trim($amount));
+                $cents = ($amount === null || $amount === '') ? (int) $b['deposit_cents'] : (int) round(((float) $amount) * 100);
+                if (!is_numeric($amount ?? 0) || $cents <= 0 || $cents > (int) $b['deposit_cents']) throw new AppError('invalid_amount', 400, ['max' => (int) $b['deposit_cents']]);
+                $note = trim(($b['admin_note'] ? $b['admin_note'] . "\n" : '') . 'Remboursé ' . Ics::eur($cents, 'fr') . ' le ' . substr($n, 0, 10)
+                    . (($r = self::cleanText($opts['note'] ?? null, 300)) !== '' ? ' · ' . $r : ''));
+                $this->update($id, ['status' => 'refunded', 'refunded_cents' => $cents, 'refunded_at' => $n, 'hold_expires_at' => null, 'admin_note' => mb_substr($note, 0, 1000)]);
+                break;
+            case 'unschedule':
+                // Carte cadeau: libera la fecha para que el beneficiario elija otra con su enlace
+                if ($b['mode'] !== 'gift' || $b['status'] !== 'confirmed' || !$b['date']) throw new AppError('invalid_transition', 409);
+                $this->update($id, ['date' => null, 'start' => null, 'end' => null, 'gift_scheduled_at' => null]);
+                break;
             default:
                 throw new AppError('invalid_action');
         }
@@ -450,8 +592,9 @@ final class Bookings
         $t = $this->today();
         return [
             'booking' => $this->adminView($b),
+            'scheduled' => (bool) $b['date'],
             'validToday' => $b['date'] === $t,
-            'expired' => $b['date'] < $t,
+            'expired' => $b['date'] ? $b['date'] < $t : ($b['gift_expires_at'] && $b['gift_expires_at'] < $t),
             'redeemed' => (bool) $b['gift_redeemed_at'],
         ];
     }
