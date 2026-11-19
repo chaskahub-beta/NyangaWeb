@@ -9,7 +9,7 @@ La misma web que la versión Node: sitio, reservas con agenda real, cartes cadea
 | `public_html/` | Su **contenido** va dentro de `public_html` (la web pública). |
 | `nyanga-app/` | La carpeta entera va **al lado** de `public_html`, nunca dentro. Ahí están el código, la configuración y las contraseñas. |
 | `dev/` | Solo para probar en este PC con Docker. **No se sube.** |
-| `docs/` + `demo/` | Demo estática para la clienta en GitHub Pages: `node demo/build-demo.mjs` la regenera y `node demo/serve-demo.mjs` la muestra en http://localhost:5600/NyangaWeb/. **No se sube al hosting.** |
+| `docs/` + `demo/` | Demo estática para la clienta en GitHub Pages (web + panel en `/admin/`, contraseña de demo « demo », con datos de ejemplo guardados en el navegador): `node demo/build-demo.mjs` la regenera y `node demo/serve-demo.mjs` la muestra en http://localhost:5600/NyangaWeb/. **No se sube al hosting.** |
 
 En el hosting debe quedar así:
 

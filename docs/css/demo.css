@@ -14,3 +14,6 @@
 @media (min-width: 900px) {
   .demo-banner { margin-left: 248px; }
 }
+
+/* En el panel no hay barra lateral */
+.demo-banner.admin { margin-left: 0 !important; }

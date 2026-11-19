@@ -18,8 +18,8 @@ fs.cpSync(SRC, OUT, {
   recursive: true,
   filter: (src) => {
     const rel = path.relative(SRC, src).split(path.sep).join("/");
-    // Fuera de la demo: API PHP, panel, .htaccess y las imágenes de los correos
-    return !["api", "admin", ".htaccess", "img/mail"].some((x) => rel === x || rel.startsWith(x + "/"));
+    // Fuera de la demo: API PHP, .htaccess y las imágenes de los correos (el panel sí va, con datos de ejemplo)
+    return !["api", ".htaccess", "img/mail"].some((x) => rel === x || rel.startsWith(x + "/"));
   }
 });
 
@@ -47,6 +47,17 @@ for (const page of ["index.html", "paiement-demo.html"]) {
     .replace(/(\s*)(<link rel="stylesheet" href="css\/styles\.css[^"]*">)/, "$1$2$1<link rel=\"stylesheet\" href=\"css/demo.css\">")
     .replace(/(\s*)<script src="/, "$1<script src=\"js/demo-api.js\"></script>$1<script src=\"");
   if (!html.includes("js/demo-api.js") || !html.includes("css/demo.css")) throw new Error(`No se pudo preparar ${page}`);
+  fs.writeFileSync(file, html);
+}
+
+// Panel de la empresa en modo demo: misma API simulada (contraseña « demo »)
+{
+  const file = path.join(OUT, "admin", "index.html");
+  let html = fs.readFileSync(file, "utf8");
+  html = html
+    .replace(/(\s*)(<link rel="stylesheet" href="admin\.css[^"]*">)/, "$1$2$1<link rel=\"stylesheet\" href=\"../css/demo.css\">")
+    .replace(/(\s*)<script src="admin\.js/, "$1<script src=\"../js/demo-api.js\"></script>$1<script src=\"admin.js");
+  if (!html.includes("../js/demo-api.js") || !html.includes("../css/demo.css")) throw new Error("No se pudo preparar admin/index.html");
   fs.writeFileSync(file, html);
 }
 

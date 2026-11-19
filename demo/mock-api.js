@@ -43,6 +43,56 @@
     try { localStorage.setItem(KEY, JSON.stringify(memory)); } catch (e) { /* navegación privada */ }
   }
 
+  // Estado del panel de la demo: bloqueos, réglages y soins editados
+  var SKEY = "nyanga-demo-state";
+  var state = (function () { try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch (e) { return {}; } })();
+  state.blocks = state.blocks || [];
+  state.nextBlock = state.nextBlock || 1;
+  function saveState() { try { localStorage.setItem(SKEY, JSON.stringify(state)); } catch (e) { /* privado */ } }
+  function settings() { return state.settings || CONFIG.settings; }
+
+  /** Soins en formato del panel: los editados, o los de catalog.json */
+  function adminServices() {
+    if (state.services) return state.services;
+    return CATALOG_DATA.services.map(function (s, i) {
+      return {
+        id: s.id, cat: s.cat, sort_order: i * 10, price: s.price, price_from: !!s.priceFrom,
+        duration: s.duration, slot_minutes: s.slotMinutes,
+        name_fr: s.name.fr, name_en: s.name.en || "", sub_fr: s.sub ? s.sub.fr : "", sub_en: s.sub ? s.sub.en : "",
+        desc_fr: s.desc ? s.desc.fr : "", desc_en: s.desc ? s.desc.en : "", active: s.active !== false
+      };
+    });
+  }
+  function catOrder(c) { return CATALOG_DATA.categories.map(function (x) { return x.id; }).indexOf(c); }
+  function sortServices(list) {
+    return list.slice().sort(function (a, b) { return (catOrder(a.cat) - catOrder(b.cat)) || (a.sort_order - b.sort_order); });
+  }
+  /** Soins visibles en el sitio (formato público) */
+  function publicServices() {
+    return sortServices(adminServices()).filter(function (s) { return s.active; }).map(function (s) {
+      var o = {
+        id: s.id, cat: s.cat, price: s.price, priceFrom: !!s.price_from, duration: s.duration, slotMinutes: s.slot_minutes,
+        name: { fr: s.name_fr, en: s.name_en || s.name_fr }, desc: { fr: s.desc_fr || "", en: s.desc_en || s.desc_fr || "" }
+      };
+      if (s.sub_fr) o.sub = { fr: s.sub_fr, en: s.sub_en || s.sub_fr };
+      return o;
+    });
+  }
+  function priceSelection(ids) {
+    if (!Array.isArray(ids) || !ids.length) throw err(400, "services_required");
+    var all = publicServices();
+    var items = ids.map(function (id) {
+      var s = all.filter(function (x) { return x.id === id; })[0];
+      if (!s) throw err(400, "unknown_service");
+      return s;
+    });
+    return {
+      items: items,
+      totalCents: items.reduce(function (n, s) { return n + Math.round(s.price * 100); }, 0),
+      minutes: items.reduce(function (n, s) { return n + s.slotMinutes; }, 0)
+    };
+  }
+
   function randomId(n) {
     var a = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
     var out = "";
@@ -73,14 +123,14 @@
     var n = nowIso();
     return Object.keys(memory).map(function (k) { return memory[k]; }).filter(function (b) {
       if (b.date !== date || b.id === excludeId) return false;
-      return b.status === "confirmed" || b.status === "completed" ||
+      return b.status === "confirmed" || b.status === "completed" || b.status === "no_show" ||
         (b.status === "pending_payment" && b.hold_expires_at > n);
     });
   }
 
   function day(date, minutes, excludeId) {
     return cal.dayAvailability(date, minutes, {
-      settings: CONFIG.settings, blocks: [], busy: busyOn(date, excludeId),
+      settings: settings(), blocks: state.blocks.filter(function (b) { return b.date === date; }), busy: busyOn(date, excludeId),
       today: today(), windowDays: CONFIG.windowDays
     });
   }
@@ -95,7 +145,7 @@
     var mode = input.mode;
     if (mode !== "me" && mode !== "gift") throw err(400, "invalid_mode");
     var sel;
-    try { sel = catalog.priceSelection(input.services); } catch (e) { throw err(400, e.message); }
+    sel = priceSelection(input.services);
     if (mode === "me") {
       if (!cal.isDate(input.date)) throw err(400, "invalid_date");
       if (!cal.isTime(input.start)) throw err(400, "invalid_time");
@@ -162,7 +212,7 @@
   }
 
   function giftLink(b) {
-    return location.origin + location.pathname.replace(/[^/]*$/, "") + "?cadeau=" + encodeURIComponent(b.gift_code);
+    return location.origin + location.pathname.replace(/admin\/[^/]*$/, "").replace(/[^/]*$/, "") + "?cadeau=" + encodeURIComponent(b.gift_code);
   }
 
   function plain(s) {
@@ -195,10 +245,8 @@
       return {
         depositRate: CONFIG.depositRate,
         categories: catalog.categories,
-        services: catalog.services.filter(function (s) { return s.active !== false; }).map(function (s) {
-          return { id: s.id, cat: s.cat, price: s.price, priceFrom: !!s.priceFrom, duration: s.duration, slotMinutes: s.slotMinutes, name: s.name, sub: s.sub, desc: s.desc };
-        }),
-        hours: CONFIG.settings.openingHours
+        services: publicServices(),
+        hours: settings().openingHours
       };
     }
 
@@ -298,6 +346,8 @@
       if (p.status === "pending_payment") {
         if (body.result === "ok") {
           p.status = "confirmed";
+          p.paid_at = nowIso();
+          p.emails_sent_at = nowIso();
           if (p.mode === "gift") { p.gift_code = giftCode(); p.gift_expires_at = cal.addDays(today(), 365); }
         } else {
           p.status = "payment_failed";
@@ -307,8 +357,234 @@
       return { ok: true };
     }
 
+    if (path.indexOf("admin/") === 0) return adminRoute(method, path.slice(6), query, body);
+
     throw err(404, "not_found");
   }
+
+  /* ---------- Panel de la empresa (demo) ---------- */
+
+  var ADMIN_KEY = "nyanga-demo-admin";
+  function isAdmin() { try { return sessionStorage.getItem(ADMIN_KEY) === "1"; } catch (e) { return false; } }
+
+  function all() { return Object.keys(memory).map(function (k) { return memory[k]; }); }
+
+  function adminView(b) {
+    var o = Object.assign({}, b);
+    o.services = JSON.parse(b.services_json);
+    delete o.services_json; delete o.token;
+    o.needs_attention = b.needs_attention || 0;
+    if (b.mode === "gift" && b.gift_code) o.gift_link = giftLink(b);
+    return o;
+  }
+
+  function lookup(code) {
+    var norm = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^NYG/, "");
+    var b = all().filter(function (x) { return x.gift_code === "NYG-" + norm.slice(0, 4) + "-" + norm.slice(4); })[0];
+    if (!b) throw err(404, "not_found");
+    var t = today();
+    return {
+      booking: adminView(b), scheduled: !!b.date, validToday: b.date === t,
+      expired: b.date ? b.date < t : (b.gift_expires_at && b.gift_expires_at < t), redeemed: !!b.gift_redeemed_at
+    };
+  }
+
+  function toEuros(v) { return Number(String(v == null ? "" : v).replace(",", ".")); }
+
+  function adminRoute(method, path, query, body) {
+    var m;
+    body = body || {};
+    if (method === "POST" && path === "login") {
+      if (String(body.password || "").trim().toLowerCase() !== "demo") throw err(401, "wrong_password");
+      try { sessionStorage.setItem(ADMIN_KEY, "1"); } catch (e) { /* privado */ }
+      return { ok: true };
+    }
+    if (method === "POST" && path === "logout") { try { sessionStorage.removeItem(ADMIN_KEY); } catch (e) { /* */ } return { ok: true }; }
+    if (method === "GET" && path === "session") return { authenticated: isAdmin(), paymentsMode: "sumup", mailMode: "smtp" };
+    if (!isAdmin()) throw err(401, "unauthorized");
+
+    if (method === "GET" && path === "bookings") {
+      var f = query.get("from") || today(), to = query.get("to") || cal.addDays(f, 60), st = query.get("status");
+      return all().filter(function (b) {
+        if (!b.date || b.date < f || b.date > to) return false;
+        if (st === "active") return b.status === "confirmed" || b.status === "pending_payment";
+        if (st) return b.status === st;
+        return b.status !== "expired" && b.status !== "payment_failed";
+      }).sort(function (a, b) { return (a.date + a.start).localeCompare(b.date + b.start); }).map(adminView);
+    }
+    if (method === "GET" && (m = path.match(/^bookings\/([^/]+)$/))) {
+      if (!memory[m[1]]) throw err(404, "not_found");
+      return adminView(memory[m[1]]);
+    }
+    if (method === "POST" && (m = path.match(/^bookings\/([^/]+)\/action$/))) {
+      var b = memory[m[1]];
+      if (!b) throw err(404, "not_found");
+      var a = body.action, n = nowIso();
+      if (a === "complete") { if (["confirmed", "no_show"].indexOf(b.status) < 0) throw err(409, "invalid_transition"); b.status = "completed"; b.balance_paid_at = n; }
+      else if (a === "no_show") { if (b.status !== "confirmed") throw err(409, "invalid_transition"); b.status = "no_show"; }
+      else if (a === "cancel") { if (["confirmed", "pending_payment"].indexOf(b.status) < 0) throw err(409, "invalid_transition"); b.status = "cancelled"; }
+      else if (a === "reopen") { if (["completed", "no_show", "cancelled"].indexOf(b.status) < 0 || !b.paid_at) throw err(409, "invalid_transition"); b.status = "confirmed"; b.balance_paid_at = null; }
+      else if (a === "resolve") { b.needs_attention = 0; }
+      else if (a === "note") { b.admin_note = clean(body.note, 1000) || null; }
+      else if (a === "resend") { if (["confirmed", "completed"].indexOf(b.status) < 0) throw err(409, "invalid_transition"); b.emails_sent_at = n; }
+      else if (a === "refund") {
+        if (["confirmed", "cancelled", "no_show"].indexOf(b.status) < 0 || !b.paid_at) throw err(409, "invalid_transition");
+        var cents = body.amount === "" || body.amount == null ? b.deposit_cents : Math.round(toEuros(body.amount) * 100);
+        if (!(cents > 0) || cents > b.deposit_cents) throw err(400, "invalid_amount");
+        b.status = "refunded"; b.refunded_cents = cents; b.refunded_at = n;
+        b.admin_note = ((b.admin_note ? b.admin_note + "\n" : "") + "Remboursé " + (cents / 100).toFixed(2).replace(".", ",") + " € le " + n.slice(0, 10) + (body.note ? " · " + clean(body.note, 300) : "")).slice(0, 1000);
+      }
+      else if (a === "unschedule") { if (b.mode !== "gift" || b.status !== "confirmed" || !b.date) throw err(409, "invalid_transition"); b.date = b.start = b.end = null; }
+      else throw err(400, "invalid_action");
+      save();
+      return adminView(b);
+    }
+    if (method === "GET" && path === "calendar") {
+      var ym = query.get("month") || "";
+      if (!/^\d{4}-\d{2}$/.test(ym)) throw err(400, "invalid_month");
+      var dim = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).getUTCDate(), days = [];
+      for (var d = 1; d <= dim; d++) {
+        var key = ym + "-" + String(d).padStart(2, "0");
+        days.push({
+          date: key, holiday: cal.holidayName(key),
+          closed: (settings().openingHours[cal.weekday(key)] || []).length === 0,
+          blocks: state.blocks.filter(function (x) { return x.date === key; }),
+          bookings: all().filter(function (x) { return x.date === key && ["confirmed", "pending_payment", "completed", "no_show"].indexOf(x.status) >= 0; }).length
+        });
+      }
+      return { month: ym, today: today(), days: days };
+    }
+    if (method === "GET" && path === "blocks") return state.blocks;
+    if (method === "POST" && path === "blocks") {
+      if (!cal.isDate(body.date)) throw err(400, "invalid_date");
+      var whole = !body.start && !body.end;
+      if (!whole && (!cal.isTime(body.start) || !cal.isTime(body.end) || body.start >= body.end)) throw err(400, "invalid_time");
+      var blk = { id: state.nextBlock++, date: body.date, start: whole ? null : body.start, end: whole ? null : body.end, reason: clean(body.reason, 200) || null };
+      state.blocks.push(blk); saveState();
+      var affected = all().filter(function (x) {
+        return x.date === blk.date && (x.status === "confirmed" || x.status === "pending_payment") &&
+          (whole || (x.start < blk.end && x.end > blk.start));
+      }).map(adminView);
+      return { id: blk.id, affected: affected, _status: 201 };
+    }
+    if (method === "DELETE" && (m = path.match(/^blocks\/(\d+)$/))) {
+      state.blocks = state.blocks.filter(function (x) { return x.id !== Number(m[1]); }); saveState();
+      return { ok: true };
+    }
+    if (method === "GET" && path === "gifts/pending") {
+      return all().filter(function (x) { return x.mode === "gift" && x.status === "confirmed" && !x.date; }).map(adminView);
+    }
+    if (method === "GET" && (m = path.match(/^gift\/([^/]+)$/))) return lookup(decodeURIComponent(m[1]));
+    if (method === "POST" && (m = path.match(/^gift\/([^/]+)\/redeem$/))) {
+      var info = lookup(decodeURIComponent(m[1])), gb = memory[info.booking.id];
+      if (info.redeemed) throw err(409, "already_redeemed");
+      if (["confirmed", "no_show"].indexOf(gb.status) < 0) throw err(409, "not_valid");
+      if (!info.validToday && !body.force) throw err(409, "wrong_date", { date: gb.date });
+      gb.gift_redeemed_at = nowIso(); save();
+      return lookup(gb.gift_code);
+    }
+    if (method === "GET" && path === "settings") return settings();
+    if (method === "PUT" && path === "settings") {
+      var next = Object.assign({}, settings());
+      if (body.openingHours) {
+        var h = {};
+        for (var dd = 0; dd <= 6; dd++) {
+          var list = body.openingHours[dd] || [];
+          list.forEach(function (r) { if (!cal.isTime(r[0]) || !cal.isTime(r[1]) || r[0] >= r[1]) throw err(400, "invalid_hours"); });
+          h[dd] = list;
+        }
+        next.openingHours = h;
+      }
+      if (body.slotStep) next.slotStep = Number(body.slotStep);
+      if (body.bufferMinutes !== undefined) next.bufferMinutes = Number(body.bufferMinutes);
+      state.settings = next; saveState();
+      return next;
+    }
+    if (method === "GET" && path === "services") return { categories: CATALOG_DATA.categories, services: sortServices(adminServices()) };
+    if ((method === "POST" && path === "services") || (method === "PUT" && (m = path.match(/^services\/([a-z0-9-]+)$/)))) {
+      var fields = [];
+      if (CATALOG_DATA.categories.map(function (c) { return c.id; }).indexOf(body.cat) < 0) fields.push("cat");
+      if (clean(body.name_fr, 80).length < 2) fields.push("name_fr");
+      var price = toEuros(body.price);
+      if (body.price === "" || isNaN(price) || price < 0) fields.push("price");
+      var dur = body.duration === "" || body.duration == null ? null : Number(body.duration);
+      var slot = body.slot_minutes === "" || body.slot_minutes == null ? dur : Number(body.slot_minutes);
+      if (!(slot >= 15)) fields.push("slot_minutes");
+      if (fields.length) throw err(400, "invalid_fields", { fields: fields });
+      var list2 = adminServices().slice();
+      var sv = {
+        cat: body.cat, price: price, price_from: !!body.price_from, duration: dur, slot_minutes: slot,
+        name_fr: clean(body.name_fr, 80), name_en: clean(body.name_en, 80), sub_fr: clean(body.sub_fr, 80), sub_en: clean(body.sub_en, 80),
+        desc_fr: String(body.desc_fr || "").slice(0, 1500), desc_en: String(body.desc_en || "").slice(0, 1500), active: body.active !== false
+      };
+      if (m) {
+        var i = list2.map(function (x) { return x.id; }).indexOf(m[1]);
+        if (i < 0) throw err(404, "not_found");
+        sv.id = m[1]; sv.sort_order = list2[i].cat === sv.cat ? list2[i].sort_order : 9999;
+        list2[i] = sv;
+      } else {
+        sv.id = plain(sv.name_fr).replace(/ /g, "-").slice(0, 32) || "soin";
+        while (list2.some(function (x) { return x.id === sv.id; })) sv.id += "-2";
+        sv.sort_order = 9999;
+        list2.push(sv);
+      }
+      state.services = list2; saveState();
+      return m ? sv : Object.assign({ _status: 201 }, sv);
+    }
+    if (method === "DELETE" && (m = path.match(/^services\/([a-z0-9-]+)$/))) {
+      state.services = adminServices().filter(function (x) { return x.id !== m[1]; }); saveState();
+      return { ok: true };
+    }
+    if (method === "POST" && path === "services/order") {
+      var ids = body.ids || [], cur = adminServices();
+      cur.forEach(function (x) { var k = ids.indexOf(x.id); if (k >= 0) x.sort_order = k * 10; });
+      state.services = cur; saveState();
+      return { categories: CATALOG_DATA.categories, services: sortServices(cur) };
+    }
+    throw err(404, "not_found");
+  }
+
+  /* ---------- Datos de ejemplo para el panel (solo la primera vez) ---------- */
+
+  (function seed() {
+    if (state.seeded) return;
+    state.seeded = true;
+    var t0 = today(), open = [], k = 1;
+    while (open.length < 6 && k < 40) {
+      var dk = cal.addDays(t0, k++);
+      if ((settings().openingHours[cal.weekday(dk)] || []).length && !cal.holidayName(dk)) open.push(dk);
+    }
+    var svc = {};
+    publicServices().forEach(function (s) { svc[s.id] = s; });
+    function mk(o) {
+      var list = o.services.map(function (id) { return svc[id]; }).filter(Boolean);
+      if (!list.length) return;
+      var total = list.reduce(function (n, s) { return n + Math.round(s.price * 100); }, 0);
+      var mins = list.reduce(function (n, s) { return n + s.slotMinutes; }, 0);
+      var b = {
+        id: randomId(9), token: randomId(18), created_at: nowIso(), lang: "fr", mode: o.mode || "me",
+        date: o.date || null, start: o.start || null, end: o.start ? cal.toTime(cal.toMin(o.start) + mins) : null, minutes: mins,
+        services_json: JSON.stringify(list.map(function (s) { return { id: s.id, name: s.name, priceCents: Math.round(s.price * 100), minutes: s.slotMinutes }; })),
+        total_cents: total, deposit_cents: o.full || o.mode === "gift" ? total : Math.round(total * 0.2), pay_full: o.full || o.mode === "gift" ? 1 : 0,
+        client_name: o.client, client_email: o.client.split(" ")[0].toLowerCase() + "@exemple.fr", client_phone: "06 12 34 56 78",
+        status: o.status || "confirmed", paid_at: nowIso(), emails_sent_at: nowIso(), needs_attention: 0
+      };
+      if (b.mode === "gift") {
+        b.gift_name = o.gift; b.gift_age = 30; b.gift_email = o.gift.split(" ")[0].toLowerCase() + "@exemple.fr";
+        b.gift_message = "Joyeux anniversaire !"; b.gift_code = giftCode(); b.gift_expires_at = cal.addDays(t0, 300);
+      }
+      memory[b.id] = b;
+    }
+    if (open.length) {
+      mk({ date: open[0], start: open[0] && settings().openingHours[cal.weekday(open[0])][0][0], services: ["signature"], client: "Julie Bernard" });
+      mk({ date: open[0], start: "14:00", services: ["headspa-voyage"], client: "Inès Moreau", full: true });
+      mk({ date: open[1], start: "10:00", services: ["hammam"], client: "Claire Petit", mode: "gift", gift: "Léa Petit" });
+      mk({ date: open[2], start: "17:00", services: ["relaxant", "visage"], client: "Sarah Lambert" });
+      mk({ date: open[3], start: "13:30", services: ["pieds"], client: "Nadia Haddad", status: "cancelled" });
+      mk({ services: ["headspa-detente"], client: "Thomas Roux", mode: "gift", gift: "Emma Roux" });
+    }
+    save(); saveState();
+  })();
 
   /* ---------- Intercepta fetch ---------- */
 
@@ -344,7 +620,12 @@
     var bar = document.createElement("div");
     bar.className = "demo-banner";
     bar.setAttribute("role", "note");
-    bar.innerHTML = "<strong>Démo</strong> · Version de présentation : aucun paiement réel, aucun e-mail envoyé.";
+    if (/\/admin\//.test(location.pathname)) {
+      bar.className += " admin";
+      bar.innerHTML = "<strong>Panel de démonstration</strong> · mot de passe : « demo » · les données restent dans ce navigateur (aucun e-mail ni paiement réel).";
+    } else {
+      bar.innerHTML = "<strong>Démo</strong> · Version de présentation : aucun paiement réel, aucun e-mail envoyé.";
+    }
     document.body.insertBefore(bar, document.body.firstChild);
   });
 })();
